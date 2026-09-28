@@ -1,31 +1,47 @@
-import { resources, validate, coerce, isIsoDate } from './resources.js';
+import { resources, isIsoDate, describeSchema } from './resources.js';
 import { localToday } from './db.js';
+import { HttpError } from './errors.js';
+import { createRepo } from './repo.js';
+import { exportWorkbook, importWorkbook } from './datasheets.js';
+import { insertDemoData } from './demo.js';
 
-export class HttpError extends Error {
-  constructor(status, message, details) {
-    super(message);
-    this.status = status;
-    this.details = details;
-  }
-}
+export { HttpError };
 
-const MAX_BODY = 1024 * 1024;
+const MAX_JSON = 1024 * 1024;
+const MAX_UPLOAD = 10 * 1024 * 1024;
 
-async function readJson(req) {
+async function readBody(req, limit) {
   let size = 0;
   const chunks = [];
   for await (const chunk of req) {
     size += chunk.length;
-    if (size > MAX_BODY) throw new HttpError(413, 'Requête trop volumineuse');
+    if (size > limit) throw new HttpError(413, `Fichier trop volumineux (${Math.round(limit / 1024 / 1024)} Mo maximum)`);
     chunks.push(chunk);
   }
-  if (!chunks.length) return {};
+  return Buffer.concat(chunks);
+}
+
+async function readJson(req) {
+  const buf = await readBody(req, MAX_JSON);
+  if (!buf.length) return {};
   try {
-    return JSON.parse(Buffer.concat(chunks).toString('utf8'));
+    return JSON.parse(buf.toString('utf8'));
   } catch {
     throw new HttpError(400, 'JSON invalide');
   }
 }
+
+function sendFile(res, buffer, filename, type) {
+  res.writeHead(200, {
+    'Content-Type': type,
+    'Content-Length': buffer.length,
+    'Content-Disposition': `attachment; filename="${filename}"`,
+    'Cache-Control': 'no-store',
+  });
+  res.end(buffer);
+}
+
+const XLSX_TYPE = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
 
 export function sendJson(res, status, body) {
   if (body === undefined) {
@@ -41,14 +57,6 @@ export function sendJson(res, status, body) {
   res.end(payload);
 }
 
-function translateDbError(err) {
-  const msg = String(err?.message ?? '');
-  if (msg.includes('FOREIGN KEY constraint failed')) {
-    return new HttpError(400, 'Référence invalide : un élément lié est introuvable');
-  }
-  return err;
-}
-
 function projectHealth(p, today) {
   const late = p.end_date && p.end_date < today && p.status !== 'completed';
   if (p.spent > p.budget || late) return 'critical';
@@ -58,13 +66,8 @@ function projectHealth(p, today) {
 }
 
 export function createApi(db, { now = localToday } = {}) {
-  const stmts = new Map();
-  const prepare = (sql) => {
-    if (!stmts.has(sql)) stmts.set(sql, db.prepare(sql));
-    return stmts.get(sql);
-  };
-
-  const findById = (def, id) => prepare(`SELECT * FROM ${def.table} WHERE id = ?`).get(id);
+  const repo = createRepo(db);
+  const { prepare } = repo;
 
   function requireId(raw) {
     const id = Number(raw);
@@ -72,61 +75,8 @@ export function createApi(db, { now = localToday } = {}) {
     return id;
   }
 
-  function runCheck(def, record) {
-    const errors = def.check?.(record);
-    if (errors) throw new HttpError(400, 'Données invalides', errors);
-  }
-
-  // --- CRUD générique -------------------------------------------------------
-
-  function list(def, url) {
-    const where = [];
-    const params = [];
-    for (const key of def.filters) {
-      const raw = url.searchParams.get(key);
-      if (raw === null) continue;
-      const { value, error } = coerce(def.fields[key], raw);
-      if (error) throw new HttpError(400, `Filtre invalide : ${key}`);
-      if (value === null) where.push(`${key} IS NULL`);
-      else { where.push(`${key} = ?`); params.push(value); }
-    }
-    const sql = `SELECT * FROM ${def.table}${where.length ? ` WHERE ${where.join(' AND ')}` : ''} ORDER BY ${def.orderBy}`;
-    return db.prepare(sql).all(...params);
-  }
-
-  function create(def, body) {
-    const { data, errors } = validate(def, body);
-    if (errors) throw new HttpError(400, 'Données invalides', errors);
-    runCheck(def, data);
-    const cols = Object.keys(data);
-    const sql = `INSERT INTO ${def.table} (${cols.join(', ')}) VALUES (${cols.map(() => '?').join(', ')}) RETURNING *`;
-    try {
-      return prepare(sql).get(...cols.map((c) => data[c]));
-    } catch (err) {
-      throw translateDbError(err);
-    }
-  }
-
-  function update(def, id, body) {
-    const existing = findById(def, id);
-    if (!existing) throw new HttpError(404, 'Ressource introuvable');
-    const { data, errors } = validate(def, body, { partial: true });
-    if (errors) throw new HttpError(400, 'Données invalides', errors);
-    runCheck(def, { ...existing, ...data });
-    const cols = Object.keys(data);
-    if (!cols.length) return existing;
-    const sql = `UPDATE ${def.table} SET ${cols.map((c) => `${c} = ?`).join(', ')} WHERE id = ? RETURNING *`;
-    try {
-      return prepare(sql).get(...cols.map((c) => data[c]), id);
-    } catch (err) {
-      throw translateDbError(err);
-    }
-  }
-
-  function remove(def, id) {
-    const { changes } = prepare(`DELETE FROM ${def.table} WHERE id = ?`).run(id);
-    if (!changes) throw new HttpError(404, 'Ressource introuvable');
-  }
+  const filtersFrom = (def, url) => Object.fromEntries(
+    def.filters.filter((k) => url.searchParams.has(k)).map((k) => [k, url.searchParams.get(k)]));
 
   // --- Indicateurs ----------------------------------------------------------
 
@@ -250,6 +200,40 @@ export function createApi(db, { now = localToday } = {}) {
     if (name === 'deadlines' && !rawId && method === 'GET') return sendJson(res, 200, deadlines(url));
     if (name === 'workload' && !rawId && method === 'GET') return sendJson(res, 200, workload());
 
+    if (name === 'schema' && !rawId && method === 'GET') return sendJson(res, 200, describeSchema());
+
+    if (name === 'export' && !rawId && method === 'GET') {
+      const template = url.searchParams.get('template') === '1';
+      const file = exportWorkbook(repo, { template });
+      const fname = template ? 'modele-pilotage-projets.xlsx' : `pilotage-projets-${now()}.xlsx`;
+      return sendFile(res, file, fname, XLSX_TYPE);
+    }
+
+    if (name === 'import' && !rawId && method === 'POST') {
+      const buffer = await readBody(req, MAX_UPLOAD);
+      if (!buffer.length) throw new HttpError(400, 'Aucun fichier reçu');
+      const report = importWorkbook(repo, buffer, {
+        mode: url.searchParams.get('mode') || 'merge',
+        dryRun: url.searchParams.get('dryRun') === '1',
+      });
+      return sendJson(res, 200, report);
+    }
+
+    if (name === 'admin' && method === 'GET' && rawId === 'stats' && !sub) {
+      return sendJson(res, 200, Object.fromEntries(Object.entries(resources).map(([key, def]) =>
+        [key, prepare(`SELECT COUNT(*) AS n FROM ${def.table}`).get().n])));
+    }
+    if (name === 'admin' && method === 'POST' && rawId === 'reset' && !sub) {
+      const body = await readJson(req);
+      if (body.confirm !== 'SUPPRIMER') throw new HttpError(400, 'Confirmation manquante : saisissez SUPPRIMER');
+      repo.transaction(() => repo.wipe());
+      return sendJson(res, 200, { ok: true });
+    }
+    if (name === 'admin' && method === 'POST' && rawId === 'demo' && !sub) {
+      repo.transaction(() => insertDemoData(db));
+      return sendJson(res, 200, { ok: true });
+    }
+
     if (name === 'projects' && sub === 'summary' && method === 'GET') {
       const [summary] = projectSummaries(requireId(rawId));
       if (!summary) throw new HttpError(404, 'Projet introuvable');
@@ -260,20 +244,20 @@ export function createApi(db, { now = localToday } = {}) {
     if (!def || sub !== undefined) throw new HttpError(404, 'Route introuvable');
 
     if (!rawId) {
-      if (method === 'GET') return sendJson(res, 200, list(def, url));
-      if (method === 'POST') return sendJson(res, 201, create(def, await readJson(req)));
+      if (method === 'GET') return sendJson(res, 200, repo.list(def, filtersFrom(def, url)));
+      if (method === 'POST') return sendJson(res, 201, repo.create(def, await readJson(req)));
       throw new HttpError(405, 'Méthode non autorisée');
     }
 
     const id = requireId(rawId);
     if (method === 'GET') {
-      const row = findById(def, id);
+      const row = repo.findById(def, id);
       if (!row) throw new HttpError(404, 'Ressource introuvable');
       return sendJson(res, 200, row);
     }
-    if (method === 'PATCH' || method === 'PUT') return sendJson(res, 200, update(def, id, await readJson(req)));
+    if (method === 'PATCH' || method === 'PUT') return sendJson(res, 200, repo.update(def, id, await readJson(req)));
     if (method === 'DELETE') {
-      remove(def, id);
+      repo.remove(def, id);
       return sendJson(res, 204);
     }
     throw new HttpError(405, 'Méthode non autorisée');

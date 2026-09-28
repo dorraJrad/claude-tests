@@ -17,13 +17,14 @@ const dateOrder = (startKey, endKey, message) => (record) =>
 export const resources = {
   projects: {
     table: 'projects',
+    label: 'Projets',
     fields: {
-      name: { type: 'text', required: true, max: 200 },
-      description: { type: 'text', max: 5000 },
-      status: { type: 'enum', values: ENUMS.projectStatus, default: 'planned' },
-      start_date: { type: 'date' },
-      end_date: { type: 'date' },
-      budget: { type: 'number', min: 0, default: 0 },
+      name: { type: 'text', required: true, max: 200, label: 'Nom' },
+      description: { type: 'text', max: 5000, label: 'Description', multiline: true },
+      status: { type: 'enum', values: ENUMS.projectStatus, default: 'planned', label: 'Statut', labels: 'projectStatus' },
+      start_date: { type: 'date', label: 'Début' },
+      end_date: { type: 'date', label: 'Fin' },
+      budget: { type: 'number', min: 0, default: 0, label: 'Budget (€)' },
     },
     check: dateOrder('start_date', 'end_date', 'La date de fin doit suivre la date de début'),
     filters: ['status'],
@@ -31,27 +32,29 @@ export const resources = {
   },
   contributors: {
     table: 'contributors',
+    label: 'Contributeurs',
     fields: {
-      name: { type: 'text', required: true, max: 200 },
-      email: { type: 'text', format: 'email', max: 320 },
-      role: { type: 'text', max: 200 },
-      daily_rate: { type: 'number', min: 0, default: 0 },
+      name: { type: 'text', required: true, max: 200, label: 'Nom' },
+      email: { type: 'text', format: 'email', max: 320, label: 'E-mail' },
+      role: { type: 'text', max: 200, label: 'Rôle' },
+      daily_rate: { type: 'number', min: 0, default: 0, label: 'Taux journalier (€)' },
     },
     filters: [],
     orderBy: 'name COLLATE NOCASE, id',
   },
   tasks: {
     table: 'tasks',
+    label: 'Tâches',
     fields: {
-      project_id: { type: 'ref', required: true },
-      title: { type: 'text', required: true, max: 300 },
-      description: { type: 'text', max: 5000 },
-      status: { type: 'enum', values: ENUMS.taskStatus, default: 'todo' },
-      priority: { type: 'enum', values: ENUMS.priority, default: 'medium' },
-      assignee_id: { type: 'ref' },
-      start_date: { type: 'date' },
-      due_date: { type: 'date' },
-      estimated_hours: { type: 'number', min: 0, default: 0 },
+      project_id: { type: 'ref', required: true, label: 'Projet', ref: 'projects' },
+      title: { type: 'text', required: true, max: 300, label: 'Titre' },
+      description: { type: 'text', max: 5000, label: 'Description', multiline: true },
+      status: { type: 'enum', values: ENUMS.taskStatus, default: 'todo', label: 'Statut', labels: 'taskStatus' },
+      priority: { type: 'enum', values: ENUMS.priority, default: 'medium', label: 'Priorité', labels: 'priority' },
+      assignee_id: { type: 'ref', label: 'Responsable', ref: 'contributors' },
+      start_date: { type: 'date', label: 'Début' },
+      due_date: { type: 'date', label: 'Échéance' },
+      estimated_hours: { type: 'number', min: 0, default: 0, label: 'Charge (h)' },
     },
     check: dateOrder('start_date', 'due_date', "L'échéance doit suivre la date de début"),
     filters: ['project_id', 'assignee_id', 'status'],
@@ -59,26 +62,28 @@ export const resources = {
   },
   milestones: {
     table: 'milestones',
+    label: 'Jalons',
     fields: {
-      project_id: { type: 'ref', required: true },
-      name: { type: 'text', required: true, max: 300 },
-      description: { type: 'text', max: 5000 },
-      due_date: { type: 'date', required: true },
-      done: { type: 'boolean', default: 0 },
+      project_id: { type: 'ref', required: true, label: 'Projet', ref: 'projects' },
+      name: { type: 'text', required: true, max: 300, label: 'Nom' },
+      description: { type: 'text', max: 5000, label: 'Description', multiline: true },
+      due_date: { type: 'date', required: true, label: 'Date' },
+      done: { type: 'boolean', default: 0, label: 'Atteint' },
     },
     filters: ['project_id', 'done'],
     orderBy: 'due_date, id',
   },
   expenses: {
     table: 'expenses',
+    label: 'Dépenses',
     fields: {
-      project_id: { type: 'ref', required: true },
-      label: { type: 'text', required: true, max: 300 },
-      category: { type: 'enum', values: ENUMS.expenseCategory, default: 'autre' },
-      amount: { type: 'number', min: 0, required: true },
-      date: { type: 'date', required: true },
-      task_id: { type: 'ref' },
-      contributor_id: { type: 'ref' },
+      project_id: { type: 'ref', required: true, label: 'Projet', ref: 'projects' },
+      label: { type: 'text', required: true, max: 300, label: 'Libellé' },
+      category: { type: 'enum', values: ENUMS.expenseCategory, default: 'autre', label: 'Catégorie', labels: 'category' },
+      amount: { type: 'number', min: 0, required: true, label: 'Montant (€)' },
+      date: { type: 'date', required: true, label: 'Date' },
+      task_id: { type: 'ref', label: 'Tâche', ref: 'tasks' },
+      contributor_id: { type: 'ref', label: 'Contributeur', ref: 'contributors' },
     },
     filters: ['project_id', 'task_id', 'contributor_id'],
     orderBy: 'date DESC, id DESC',
@@ -153,4 +158,23 @@ export function validate(def, input, { partial = false } = {}) {
     else data[key] = result.value ?? field.default ?? null;
   }
   return Object.keys(errors).length ? { errors } : { data };
+}
+
+/** Description des tables pour l'éditeur de données de l'interface. */
+export function describeSchema() {
+  return Object.fromEntries(Object.entries(resources).map(([name, def]) => [name, {
+    label: def.label,
+    fields: Object.entries(def.fields).map(([key, f]) => ({
+      name: key,
+      label: f.label,
+      type: f.type,
+      required: Boolean(f.required),
+      ...(f.default !== undefined && { default: f.default }),
+      ...(f.values && { values: f.values, labels: f.labels }),
+      ...(f.ref && { ref: f.ref }),
+      ...(f.min !== undefined && { min: f.min }),
+      ...(f.format && { format: f.format }),
+      ...(f.multiline && { multiline: true }),
+    })),
+  }]));
 }

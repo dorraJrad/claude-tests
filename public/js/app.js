@@ -3,6 +3,7 @@ import { projectsList } from './views/projects.js';
 import { projectDetail } from './views/project.js';
 import { deadlines } from './views/deadlines.js';
 import { contributors } from './views/contributors.js';
+import { dataView } from './views/data.js';
 import { esc } from './ui.js';
 
 const ROUTES = [
@@ -11,9 +12,10 @@ const ROUTES = [
   [/^#\/projets\/(\d+)(?:\/([\w-]+))?\/?$/, 'projets', projectDetail],
   [/^#\/echeances\/?$/, 'echeances', deadlines],
   [/^#\/contributeurs\/?$/, 'contributeurs', contributors],
+  [/^#\/donnees\/?$/, 'donnees', dataView],
 ];
 
-const HANDLERS = ['onclick', 'onchange', 'ondragstart', 'ondragend', 'ondragover', 'ondragleave', 'ondrop'];
+const HANDLERS = ['onclick', 'onchange', 'oninput', 'ondragstart', 'ondragend', 'ondragover', 'ondragleave', 'ondrop'];
 
 const el = document.getElementById('app');
 let renderId = 0;

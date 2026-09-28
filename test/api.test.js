@@ -156,3 +156,18 @@ test('sert les fichiers statiques sans sortir du dossier public', async () => {
   const traversal = await fetch(`${base}/%2e%2e/package.json`);
   assert.ok([403, 404].includes(traversal.status));
 });
+
+test("refuse les modifications venant d'un autre site (CSRF)", async () => {
+  const res = await fetch(`${base}/api/admin/reset`, {
+    method: 'POST',
+    headers: { Origin: 'https://site-malveillant.example', 'Content-Type': 'text/plain' },
+    body: JSON.stringify({ confirm: 'SUPPRIMER' }),
+  });
+  assert.equal(res.status, 403);
+  const same = await fetch(`${base}/api/projects`, {
+    method: 'POST',
+    headers: { Origin: base, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ name: 'Même origine' }),
+  });
+  assert.equal(same.status, 201);
+});

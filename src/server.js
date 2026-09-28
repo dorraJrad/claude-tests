@@ -39,6 +39,16 @@ async function serveStatic(req, res, url, publicDir) {
   }
 }
 
+function sameOrigin(req) {
+  const origin = req.headers.origin;
+  if (!origin) return true; // clients hors navigateur (curl, tests)
+  try {
+    return new URL(origin).host === req.headers.host;
+  } catch {
+    return false;
+  }
+}
+
 export function createServer({ db, publicDir = DEFAULT_PUBLIC_DIR, now } = {}) {
   const api = createApi(db, { now });
   const root = resolve(publicDir);
@@ -47,7 +57,13 @@ export function createServer({ db, publicDir = DEFAULT_PUBLIC_DIR, now } = {}) {
     let url;
     try {
       url = new URL(req.url, 'http://localhost');
-      if (url.pathname.startsWith('/api/')) return await api(req, res, url);
+      if (url.pathname.startsWith('/api/')) {
+        // Protection CSRF : une autre page web ouverte dans le navigateur ne doit pas pouvoir modifier la base.
+        if (!['GET', 'HEAD'].includes(req.method) && !sameOrigin(req)) {
+          throw new HttpError(403, 'Requête refusée : origine non autorisée');
+        }
+        return await api(req, res, url);
+      }
       if (req.method !== 'GET' && req.method !== 'HEAD') throw new HttpError(405, 'Méthode non autorisée');
       await serveStatic(req, res, url, root);
     } catch (err) {

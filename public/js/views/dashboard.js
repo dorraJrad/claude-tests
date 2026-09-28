@@ -31,7 +31,8 @@ export async function dashboard({ el, refresh }) {
       ${active.length ? `<div class="table-wrap"><table class="table">
         <thead><tr><th>Projet</th><th>Avancement</th><th>Budget</th><th>Prochaine échéance</th><th>Santé</th></tr></thead>
         <tbody>${active.map(projectRow).join('')}</tbody></table></div>`
-      : empty('Aucun projet en cours.', '<button class="btn btn-primary" data-action="new-project">Créer un projet</button>')}
+      : empty('Aucun projet en cours.', `<div class="actions center"><button class="btn btn-primary" data-action="new-project">Créer un projet</button>
+          <a class="btn" href="#/donnees">Importer un fichier Excel</a></div>`)}
     </section>
 
     <div class="grid-2">
