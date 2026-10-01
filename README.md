@@ -1,116 +1,109 @@
 # Pilotage de projets
 
-Application web pour chef de projet : suivi des **tâches**, des **budgets**, des **échéances** et des **contributeurs**.
+Application de pilotage de projets **autonome** : un seul fichier HTML qui s'ouvre dans le navigateur.
+Suivi des **tâches**, des **échéances**, des **contributeurs** et des **budgets** (budget global, postes de dépense,
+engagé, réalisé).
 
-- Aucune dépendance à installer : Node.js ≥ 22.13 suffit (serveur HTTP et base SQLite intégrés à Node).
-- Interface en français, responsive, avec thème clair/sombre automatique.
+- **Aucune installation, aucun serveur, aucune connexion Internet** : idéal pour un poste verrouillé.
+- Le fichier se transmet par e-mail, clé USB, Teams, SharePoint…
+- Interface en français, responsive, thème clair / sombre automatique.
 
-## Installation sur votre poste
+## Utilisation
 
-1. **Installer Node.js** (une seule fois) : téléchargez la version **LTS** sur <https://nodejs.org/fr/download>
-   et installez-la avec les options par défaut. Il faut la version 22.13 ou plus récente.
-2. **Récupérer l'application** : sur GitHub, ouvrez la branche de l'application, cliquez sur
-   **Code → Download ZIP** puis décompressez le dossier (ou `git clone` si vous utilisez Git).
-3. **Lancer l'application** en double-cliquant sur le lanceur correspondant à votre système :
+1. Récupérez le fichier **`dist/pilotage-projets.html`** (environ 190 Ko).
+2. Enregistrez-le sur le poste (par exemple dans *Documents*), puis **double-cliquez dessus** :
+   il s'ouvre dans le navigateur par défaut (Edge, Chrome ou Firefox récents).
+3. Au premier lancement, choisissez : ouvrir un fichier de données, créer un projet, ou découvrir l'exemple.
 
-   | Système  | Fichier à double-cliquer | Remarque |
-   |----------|--------------------------|----------|
-   | Windows  | `Demarrer-Windows.bat`   | Si Windows affiche « Windows a protégé votre ordinateur », cliquez sur *Informations complémentaires → Exécuter quand même*. |
-   | macOS    | `Demarrer-Mac.command`   | La première fois : clic droit → *Ouvrir* (Gatekeeper bloque les fichiers téléchargés). |
-   | Linux    | `demarrer-linux.sh`      | Ou `./demarrer-linux.sh` dans un terminal. |
+### Où sont les données ?
 
-   Le navigateur s'ouvre automatiquement sur <http://127.0.0.1:3000>.
-   **Laissez la fenêtre noire ouverte** pendant l'utilisation ; fermez-la pour arrêter l'application.
+- **Automatiquement dans le navigateur** du poste, à chaque modification. En rouvrant le fichier HTML sur le même
+  poste et avec le même navigateur, on retrouve ses données.
+- **Dans un fichier Excel** quand vous cliquez sur **Enregistrer** (en bas du menu, ou `Ctrl+S`).
+  C'est votre sauvegarde : rouvrez-la avec **Ouvrir…**, transmettez-la à un collègue (qui l'ouvre avec sa propre
+  copie de l'application), ou consultez-la directement dans Excel.
+  - Avec Edge / Chrome, l'application peut réécrire directement le même fichier à chaque enregistrement ;
+    sinon le fichier est téléchargé (dossier *Téléchargements*).
+  - Le menu indique si des modifications n'ont pas encore été enregistrées dans un fichier, et le navigateur
+    vous prévient si vous fermez la page dans ce cas.
 
-Alternative en ligne de commande (dans le dossier de l'application) :
+> ⚠️ Certains postes d'entreprise effacent les données des navigateurs à la fermeture : **enregistrez régulièrement
+> le fichier Excel**, c'est la seule sauvegarde qui vous appartient.
 
-```bash
-npm start        # démarre sur http://127.0.0.1:3000
-npm run seed     # (optionnel) ajoute des données de démonstration
-```
+### Envoi par e-mail
 
-**Où sont mes données ?** Dans le fichier `data/projets.db` du dossier de l'application.
-Pour sauvegarder, utilisez **Données → Télécharger les données (.xlsx)** ; pour restaurer, importez ce fichier
-en mode *Remplacer*. Pour mettre à jour l'application, remplacez les fichiers en conservant le dossier `data/`.
-
-Variables d'environnement (facultatives) :
-
-| Variable  | Défaut             | Rôle                          |
-|-----------|--------------------|-------------------------------|
-| `PORT`    | `3000`             | Port d'écoute (si 3000 est déjà pris) |
-| `HOST`    | `127.0.0.1`        | Mettre `0.0.0.0` pour y accéder depuis d'autres postes du réseau (aucune authentification : réseau de confiance uniquement) |
-| `DB_FILE` | `data/projets.db`  | Fichier de la base SQLite     |
+Joignez simplement `pilotage-projets.html`. Certaines passerelles de messagerie bloquent les pièces jointes `.html` ;
+dans ce cas, compressez-le en `.zip` ou déposez-le sur Teams / SharePoint / OneDrive.
+Le destinataire doit **enregistrer** la pièce jointe puis l'ouvrir (et non l'ouvrir depuis l'aperçu de la messagerie).
 
 ## Fonctionnalités
 
-**Tableau de bord** — projets en cours, avancement global, budget consommé, échéances dépassées ;
-état de santé de chaque projet (*Dans les clous*, *À surveiller*, *Critique*) ; échéances des 30 prochains jours
-(à cocher directement) ; charge de chaque contributeur.
+**Tableau de bord** : projets en cours, avancement, budget engagé, échéances dépassées, santé de chaque projet,
+échéances des 30 prochains jours (à cocher directement), charge des contributeurs.
 
-**Projets** — fiche projet (statut, dates, budget) avec quatre onglets :
-- **Tâches** : tableau kanban *À faire / En cours / Terminé* avec glisser-déposer, priorité, responsable,
-  charge estimée, dates ; filtre par responsable.
-- **Planning & jalons** : diagramme de Gantt des tâches, jalons, ligne « aujourd'hui » et fin prévue.
-- **Budget** : budget alloué / dépensé / reste, prévision de main-d'œuvre (charge × taux journalier),
-  coût projeté à terminaison, répartition par catégorie, liste des dépenses.
-- **Équipe** : avancement, reste à faire, retards, coût prévu et dépenses imputées par contributeur.
+**Projets**, avec quatre onglets :
+- **Tâches** : tableau kanban *À faire / En cours / Terminé* avec glisser-déposer, priorité, responsable, charge, dates.
+- **Planning & jalons** : diagramme de Gantt, jalons, ligne « aujourd'hui ».
+- **Budget** : budget global, **postes de dépense** (prévu / engagé / réalisé / disponible / consommation),
+  **engagements & dépenses** (fournisseur, référence de commande ou facture, montant engagé, montant réalisé, statut),
+  alertes de dépassement, évolution mensuelle, prévision de main-d'œuvre interne.
+- **Équipe** : avancement, reste à faire, retards et coûts par contributeur.
 
-**Échéances** — toutes les tâches et jalons ouverts, regroupés (en retard, aujourd'hui, 7 jours, 30 jours, plus tard),
-filtrables par projet et par type.
+**Project management** : pilotage budgétaire consolidé de tous les projets : budget global, engagé, réalisé,
+disponible, reste à payer, budget par projet, **par nature de dépense**, évolution mensuelle et alertes
+(postes et projets en dépassement ou engagés à plus de 90 %).
 
-**Contributeurs** — annuaire (rôle, e-mail, taux journalier) et charge de travail.
+**Échéances** : toutes les tâches et jalons ouverts, regroupés par urgence, filtrables.
 
-**Données** — gestion de la base directement dans l'interface :
-- **Import Excel** : téléchargez le modèle, remplissez un onglet par table (Contributeurs, Projets, Tâches, Jalons, Dépenses),
-  puis importez-le. Le fichier est d'abord **analysé** (nombre d'éléments à créer / mettre à jour, erreurs localisées
-  par onglet, ligne et colonne) ; rien n'est enregistré avant confirmation, et rien du tout s'il reste une erreur.
-  - *Fusionner* : met à jour les éléments de même ID ou de même nom, ajoute les nouveaux ; une cellule vide ne modifie pas la valeur existante.
-  - *Remplacer* : vide la base puis charge le fichier (restauration d'une sauvegarde).
-  - Libellés en français acceptés (« En cours », « Haute », « Oui »…), dates Excel ou JJ/MM/AAAA, liens par nom (projet, responsable, tâche).
-- **Export Excel** de toute la base (sauvegarde, ou modification en masse dans Excel puis ré-import).
-- **Éditeur de tables** : chaque table affichée comme un tableur, modification directe des cellules
-  (enregistrement immédiat et validé), ajout, suppression, recherche.
-- Chargement des données de démonstration et remise à zéro de la base (confirmation requise).
+**Contributeurs** : annuaire (rôle, e-mail, taux journalier) et charge de travail.
 
-### Règles de calcul
+**Données** : import d'un classeur Excel (analyse préalable, erreurs localisées, mode *Fusionner* ou *Remplacer*),
+export, modèle vierge, éditeur de tables façon tableur, données de démonstration, remise à zéro.
 
-- **Avancement** = tâches terminées / tâches totales.
-- **Prévision main-d'œuvre** = Σ (heures estimées × taux journalier / 8) des tâches assignées.
-- **Santé** : *Critique* si les dépenses dépassent le budget ou si la date de fin est passée (projet non terminé) ;
-  *À surveiller* s'il existe une tâche ou un jalon en retard, ou si plus de 90 % du budget est consommé.
+### Gestion budgétaire : définitions
 
-## API REST
+| Notion | Définition |
+|--------|-----------|
+| **Budget global** | Enveloppe totale du projet. |
+| **Poste budgétaire** | Découpage du budget (ex. *Prestations externes*, *Licences*, *Matériel*) avec un montant prévu et une nature. |
+| **Engagé** | Montant commandé ou signé (bon de commande, contrat), qu'il soit facturé ou non. |
+| **Réalisé** | Part de l'engagé déjà facturée ou payée (toujours ≤ engagé). |
+| **Disponible** | Prévu − engagé (négatif = dépassement). |
+| **Reste à payer** | Engagé − réalisé. |
+| **Non réparti** | Budget global − somme des postes. |
 
-Toutes les routes sont sous `/api` et échangent du JSON.
+Statut d'un engagement : *Engagé* (rien de réalisé), *Partiellement réalisé*, *Soldé*.
+Santé d'un projet : *Critique* si l'engagé dépasse le budget global ou si la date de fin est passée ;
+*À surveiller* en cas d'échéance dépassée, de poste en dépassement, de postes supérieurs au budget global
+ou d'engagé > 90 % du budget.
 
-| Ressource       | Routes                                                     | Filtres (`?clé=valeur`)                 |
-|-----------------|------------------------------------------------------------|-----------------------------------------|
-| `projects`      | `GET, POST /api/projects` · `GET, PATCH, DELETE /api/projects/:id` | `status`                        |
-| `tasks`         | idem                                                       | `project_id`, `assignee_id`, `status`   |
-| `milestones`    | idem                                                       | `project_id`, `done`                    |
-| `expenses`      | idem                                                       | `project_id`, `task_id`, `contributor_id` |
-| `contributors`  | idem                                                       | —                                       |
+### Format du fichier Excel
 
-Données : `GET /api/export` (classeur .xlsx, `?template=1` pour le modèle vierge),
-`POST /api/import?mode=merge|replace&dryRun=1` (corps : fichier .xlsx), `GET /api/schema`, `GET /api/admin/stats`,
-`POST /api/admin/demo`, `POST /api/admin/reset` (`{"confirm":"SUPPRIMER"}`).
+Un onglet par table : *Contributeurs, Projets, Postes budgétaires, Tâches, Jalons, Engagements*, plus un onglet
+*Mode d'emploi* qui décrit chaque colonne. Les liens se font par le nom (colonne « Projet » = nom du projet,
+« Poste » = nom d'un poste de ce projet, « Responsable » = nom d'un contributeur). Les libellés français
+(« En cours », « Haute », « Oui »…) et les dates Excel ou JJ/MM/AAAA sont acceptés.
+Les fichiers exportés par la version précédente (onglet *Dépenses*) s'importent aussi : leur montant devient
+l'engagé, considéré comme entièrement réalisé.
 
-Indicateurs : `GET /api/dashboard`, `GET /api/projects/:id/summary`,
-`GET /api/deadlines?project_id=&until=AAAA-MM-JJ`, `GET /api/workload`.
+## Développement
 
-Les erreurs de validation renvoient `400` avec le détail par champ : `{ "error": "...", "details": { "champ": "message" } }`.
-
-## Structure
-
-```
-src/        serveur (index.js, server.js, api.js, repo.js, resources.js, db.js,
-            datasheets.js = import/export Excel, xlsx.js = lecture/écriture .xlsx sans dépendance)
-public/     interface (index.html, styles.css, js/…)
-test/       tests d'API et d'import/export Excel (node --test)
-```
-
-## Tests
+Le code source est dans `src/` ; le fichier distribué est **généré** :
 
 ```bash
-npm test
+npm install      # outil de construction (esbuild), uniquement pour les développeurs
+npm run build    # produit dist/pilotage-projets.html
+npm test         # tests du cœur (données, calculs budgétaires, import/export Excel)
 ```
+
+```
+src/core/   logique sans interface, testée sous Node : schéma et validation, base en mémoire
+            (store.js), indicateurs et budget (metrics.js), Excel (xlsx.js, zip.js, datasheets.js)
+src/ui/     interface : vues, formulaires, sauvegarde navigateur / fichier (state.js)
+src/index.html, src/styles.css   gabarit et styles, intégrés dans le fichier final
+build.mjs   assemble le tout en un seul fichier HTML
+test/       tests (node --test)
+```
+
+Aucune bibliothèque tierce n'est embarquée dans l'application : la lecture/écriture des fichiers Excel
+(format ZIP + XML) est implémentée dans `src/core/zip.js` et `src/core/xlsx.js`.

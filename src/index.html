@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Pilotage de projets</title>
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%233b5bdb'/%3E%3Cpath d='M9 22V10h7a4 4 0 010 8h-7' stroke='white' stroke-width='3' fill='none'/%3E%3C/svg%3E">
-  <link rel="stylesheet" href="/styles.css">
+  <!--STYLES-->
 </head>
 <body>
   <div class="layout">
@@ -17,15 +17,24 @@
       <nav>
         <a href="#/" data-nav="dashboard">Tableau de bord</a>
         <a href="#/projets" data-nav="projets">Projets</a>
+        <a href="#/pilotage" data-nav="pilotage">Project management</a>
         <a href="#/echeances" data-nav="echeances">Échéances</a>
         <a href="#/contributeurs" data-nav="contributeurs">Contributeurs</a>
         <a href="#/donnees" data-nav="donnees">Données</a>
       </nav>
+      <section class="save-panel" aria-label="Sauvegarde des données">
+        <div class="save-status" data-save-status></div>
+        <div class="save-actions">
+          <button class="btn btn-primary btn-small" data-save title="Enregistrer toutes les données dans un fichier Excel (Ctrl+S)">Enregistrer</button>
+          <button class="btn btn-small btn-sidebar" data-open title="Ouvrir un fichier de données (.xlsx)">Ouvrir…</button>
+        </div>
+        <small class="version"><!--VERSION--></small>
+      </section>
     </aside>
     <main id="app" tabindex="-1"></main>
   </div>
   <dialog id="modal"></dialog>
   <div id="toasts" aria-live="polite"></div>
-  <script type="module" src="/js/app.js"></script>
+  <!--SCRIPT-->
 </body>
 </html>

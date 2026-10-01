@@ -392,9 +392,56 @@ dialog::backdrop { background: rgb(15 19 32 / 55%); }
 @keyframes saved { from { background: var(--success-soft); } to { background: transparent; } }
 input[type=search] { min-width: 220px; }
 
+/* --- Sauvegarde (barre latérale) ---------------------------------------- */
+
+.sidebar { display: flex; flex-direction: column; overflow-y: auto; }
+.save-panel { margin-top: auto; padding: 14px 6px 0; border-top: 1px solid rgb(255 255 255 / 10%); display: grid; gap: 10px; }
+.save-status { display: grid; gap: 3px; font-size: .78rem; line-height: 1.35; color: var(--sidebar-text); word-break: break-word; }
+.save-status .warn { color: #ffc078; }
+.save-status .ok { color: #8ce99a; }
+.save-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+.version { color: rgb(255 255 255 / 35%); font-size: .7rem; }
+.btn-sidebar { background: transparent; color: #fff; border-color: rgb(255 255 255 / 25%); }
+.btn-sidebar:hover { background: rgb(255 255 255 / 8%); }
+
+/* --- Budget --------------------------------------------------------------- */
+
+.stats-auto { grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); }
+.gauge { position: relative; display: flex; height: 22px; border-radius: 6px; overflow: hidden; background: var(--surface-2); }
+.gauge > span { display: block; height: 100%; }
+.gauge-invoiced { background: var(--success); }
+.gauge-committed { background: var(--primary); }
+.gauge-available { background: var(--surface-2); }
+.swatch.gauge-available { background: var(--border); }
+.gauge-limit { position: absolute; top: -2px; bottom: -2px; width: 3px; margin-left: -1px; background: var(--danger); }
+.gauge:has(.gauge-limit) .gauge-committed { background: linear-gradient(90deg, var(--primary), var(--danger)); }
+.alerts { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.alert { padding: 8px 12px; border-radius: 8px; font-size: .88rem; border-left: 4px solid; margin: 0; }
+.alert a { color: inherit; }
+.alert-danger { background: var(--danger-soft); color: var(--danger); border-color: var(--danger); }
+.alert-warning { background: var(--warning-soft); color: var(--warning); border-color: var(--warning); }
+.alert-info { background: var(--info-soft); color: var(--info); border-color: var(--info); }
+.alert-success { background: var(--success-soft); color: var(--success); border-color: var(--success); }
+.row-muted td { color: var(--muted); }
+.toolbar-inline { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.link-btn { background: none; border: 0; padding: 0 0 0 6px; color: var(--primary); font: inherit; font-size: .78rem; cursor: pointer; text-decoration: underline; }
+
+/* --- Accueil -------------------------------------------------------------- */
+
+.welcome { max-width: 860px; margin: 24px auto; padding: 32px; }
+.welcome h1 { margin-bottom: 8px; }
+.welcome-actions { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; margin: 24px 0; }
+.welcome-choice {
+  display: flex; flex-direction: column; gap: 6px; text-align: left; padding: 16px; cursor: pointer; font: inherit; color: var(--text);
+  background: var(--surface-2); border: 1px solid var(--border); border-radius: var(--radius);
+}
+.welcome-choice:hover { border-color: var(--primary); background: var(--primary-soft); }
+.welcome-choice span { color: var(--muted); font-size: .85rem; }
+
 /* --- Responsive -------------------------------------------------------- */
 
 @media (max-width: 1100px) {
+  .welcome-actions { grid-template-columns: 1fr; }
   .stats, .stats-5 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .grid-2, .grid-wide-left, .grid-wide-right { grid-template-columns: 1fr; }
 }
@@ -402,6 +449,8 @@ input[type=search] { min-width: 220px; }
 @media (max-width: 760px) {
   .layout { grid-template-columns: 1fr; }
   .sidebar { position: static; height: auto; padding: 12px 16px; display: flex; flex-direction: column; gap: 8px; }
+  .save-panel { margin-top: 4px; padding-top: 10px; }
+  .welcome-actions { grid-template-columns: 1fr; }
   .brand { margin: 0; }
   .sidebar nav { flex-direction: row; overflow-x: auto; }
   .sidebar nav a { white-space: nowrap; }

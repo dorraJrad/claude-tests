@@ -34,13 +34,13 @@ export function projectForm(project, onDone) {
       { name: 'name', label: 'Nom du projet', required: true, full: true },
       { name: 'description', label: 'Description', type: 'textarea', full: true },
       { name: 'status', label: 'Statut', type: 'select', required: true, options: options(LABELS.projectStatus) },
-      { name: 'budget', label: 'Budget (€)', type: 'number', min: 0, step: 'any' },
+      { name: 'budget', label: 'Budget global (€)', type: 'number', min: 0, step: 'any' },
       { name: 'start_date', label: 'Date de début', type: 'date' },
       { name: 'end_date', label: 'Date de fin prévue', type: 'date' },
     ],
     onSubmit: saveHandler('projects', project, 'Projet', onDone),
     onDelete: deleteHandler('projects', project,
-      'Supprimer ce projet ainsi que toutes ses tâches, jalons et dépenses ?', onDone),
+      'Supprimer ce projet ainsi que toutes ses tâches, jalons, postes budgétaires et engagements ?', onDone),
   });
 }
 
@@ -79,20 +79,45 @@ export function milestoneForm(milestone, onDone) {
   });
 }
 
-export function expenseForm(expense, { tasks, contributors }, onDone) {
+export function budgetLineForm(line, onDone) {
   openForm({
-    title: expense?.id ? 'Modifier la dépense' : 'Nouvelle dépense',
-    values: { date: today(), category: 'autre', ...expense },
+    title: line?.id ? 'Modifier le poste budgétaire' : 'Nouveau poste budgétaire',
+    values: { category: 'autre', ...line },
     fields: [
-      { name: 'label', label: 'Libellé', required: true, full: true },
-      { name: 'amount', label: 'Montant (€)', type: 'number', min: 0, step: 'any', required: true },
+      { name: 'name', label: 'Poste', required: true, full: true, placeholder: 'ex. Prestations de développement' },
+      { name: 'category', label: 'Nature', type: 'select', required: true, options: options(LABELS.category) },
+      { name: 'amount', label: 'Budget prévu (€)', type: 'number', min: 0, step: 'any' },
+      { name: 'notes', label: 'Commentaire', type: 'textarea', full: true },
+    ],
+    onSubmit: saveHandler('budget_lines', line, 'Poste', onDone),
+    onDelete: deleteHandler('budget_lines', line,
+      'Supprimer ce poste ? Ses engagements resteront dans le projet, sans poste.', onDone),
+  });
+}
+
+/**
+ * Engagement (commande, contrat, bon de commande) ou dépense directe.
+ * Montant engagé = montant commandé ; montant réalisé = part déjà facturée / payée.
+ */
+export function expenseForm(expense, { tasks, contributors, lines }, onDone) {
+  openForm({
+    title: expense?.id ? "Modifier l'engagement" : 'Nouvel engagement / dépense',
+    values: { date: today(), amount_invoiced: 0, ...expense },
+    fields: [
+      { name: 'label', label: 'Libellé', required: true, full: true, placeholder: 'ex. Bon de commande lot 2' },
+      { name: 'budget_line_id', label: 'Poste budgétaire', type: 'select', placeholder: 'Non affecté', full: true, options: lines.map((l) => [l.id, l.name]) },
+      { name: 'amount_committed', label: 'Montant engagé (€)', type: 'number', min: 0, step: 'any', required: true,
+        hint: 'Montant commandé ou signé' },
+      { name: 'amount_invoiced', label: 'Montant réalisé (€)', type: 'number', min: 0, step: 'any',
+        hint: 'Part déjà facturée / payée', fill: { from: 'amount_committed', label: 'Tout est réalisé' } },
+      { name: 'supplier', label: 'Fournisseur' },
+      { name: 'reference', label: 'Référence', placeholder: 'N° de commande ou de facture' },
       { name: 'date', label: 'Date', type: 'date', required: true },
-      { name: 'category', label: 'Catégorie', type: 'select', required: true, options: options(LABELS.category) },
       { name: 'contributor_id', label: 'Contributeur', type: 'select', placeholder: 'Aucun', options: contributorOptions(contributors) },
       { name: 'task_id', label: 'Tâche liée', type: 'select', placeholder: 'Aucune', full: true, options: tasks.map((t) => [t.id, t.title]) },
     ],
-    onSubmit: saveHandler('expenses', expense, 'Dépense', onDone, true),
-    onDelete: deleteHandler('expenses', expense, 'Supprimer cette dépense ?', onDone),
+    onSubmit: saveHandler('expenses', expense, 'Engagement', onDone),
+    onDelete: deleteHandler('expenses', expense, 'Supprimer cet engagement ?', onDone),
   });
 }
 

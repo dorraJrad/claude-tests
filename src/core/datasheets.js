@@ -1,9 +1,10 @@
 // Import / export de toute la base au format Excel.
-// Un onglet par table ; les liens (projet, responsable, tâche) sont exprimés par leur nom.
-import { resources, validate } from './resources.js';
-import { LABELS } from '../public/js/labels.js';
+// Un onglet par table ; les liens (projet, poste, responsable, tâche) sont exprimés par leur nom.
+import { resources, validate } from './schema.js';
+import { LABELS } from './labels.js';
 import { readXlsx, writeXlsx, excelSerialToIso, XlsxError } from './xlsx.js';
-import { HttpError } from './errors.js';
+import { ZipError } from './zip.js';
+import { AppError } from './store.js';
 
 const MAX_ERRORS = 200;
 
@@ -38,7 +39,19 @@ export const SHEETS = [
       { key: 'status', header: 'Statut', labels: 'projectStatus', aliases: ['etat', 'status'], width: 14 },
       { key: 'start_date', header: 'Date de début', aliases: ['debut', 'startdate'], width: 14 },
       { key: 'end_date', header: 'Date de fin', aliases: ['fin', 'datedefinprevue', 'enddate'], width: 14 },
-      { key: 'budget', header: 'Budget (€)', type: 'money', width: 14 },
+      { key: 'budget', header: 'Budget global (€)', aliases: ['budget', 'enveloppe', 'budgettotal'], type: 'money', width: 16 },
+    ],
+  },
+  {
+    resource: 'budget_lines', name: 'Postes budgétaires', aliases: ['postes', 'poste', 'postesbudgetaires', 'budget', 'budgetlines', 'lignesbudgetaires'],
+    naturalKey: (r) => `${r.project_id}|${norm(r.name)}`,
+    columns: [
+      id,
+      project,
+      { key: 'name', header: 'Poste', aliases: ['postebudgetaire', 'nom', 'ligne', 'name'], width: 30 },
+      { key: 'category', header: 'Nature', labels: 'category', aliases: ['categorie', 'type', 'category'], width: 26 },
+      { key: 'amount', header: 'Budget prévu (€)', aliases: ['budget', 'montant', 'prevu', 'budgetalloue', 'amount'], type: 'money', width: 16 },
+      { key: 'notes', header: 'Commentaire', aliases: ['notes', 'remarque'], type: 'wrap', width: 40 },
     ],
   },
   {
@@ -70,15 +83,18 @@ export const SHEETS = [
     ],
   },
   {
-    resource: 'expenses', name: 'Dépenses', aliases: ['depense', 'expenses', 'couts', 'budget'],
-    naturalKey: (r) => `${r.project_id}|${norm(r.label)}|${r.date}|${Number(r.amount)}`,
+    resource: 'expenses', name: 'Engagements', aliases: ['depense', 'depenses', 'engagement', 'engagementsdepenses', 'expenses', 'couts', 'commandes'],
+    naturalKey: (r) => `${r.project_id}|${norm(r.label)}|${r.date}|${Number(r.amount_committed)}`,
     columns: [
       id,
       project,
-      { key: 'label', header: 'Libellé', aliases: ['depense', 'intitule', 'description', 'label'], width: 32 },
-      { key: 'category', header: 'Catégorie', labels: 'category', aliases: ['type', 'category'], width: 13 },
-      { key: 'amount', header: 'Montant (€)', aliases: ['cout', 'amount'], type: 'money', width: 13 },
+      { key: 'budget_line', header: 'Poste', lookup: 'budget_lines', field: 'budget_line_id', aliases: ['postebudgetaire', 'ligne'], width: 26 },
+      { key: 'label', header: 'Libellé', aliases: ['depense', 'intitule', 'description', 'objet', 'label'], width: 32 },
+      { key: 'supplier', header: 'Fournisseur', aliases: ['prestataire', 'supplier', 'tiers'], width: 22 },
+      { key: 'reference', header: 'Référence', aliases: ['ref', 'numerodecommande', 'bondecommande', 'facture', 'reference'], width: 16 },
       { key: 'date', header: 'Date', width: 12 },
+      { key: 'amount_committed', header: 'Montant engagé (€)', aliases: ['engage', 'montant', 'cout', 'amount', 'montantcommande'], type: 'money', width: 18 },
+      { key: 'amount_invoiced', header: 'Montant réalisé (€)', aliases: ['realise', 'facture', 'paye', 'montantfacture', 'montantpaye'], type: 'money', width: 18 },
       { key: 'contributor', header: 'Contributeur', lookup: 'contributors', field: 'contributor_id', aliases: ['responsable'], width: 22 },
       { key: 'task', header: 'Tâche', lookup: 'tasks', field: 'task_id', aliases: ['tacheliee', 'task'], width: 30 },
     ],
@@ -90,15 +106,16 @@ const columnType = (spec, col) => col.type ?? (fieldOf(spec, col)?.type === 'dat
 
 // --- Export -------------------------------------------------------------------
 
-export function exportWorkbook(repo, { template = false } = {}) {
+export function exportWorkbook(store, { template = false } = {}) {
   const names = {
-    projects: new Map(repo.list(resources.projects).map((r) => [r.id, r.name])),
-    contributors: new Map(repo.list(resources.contributors).map((r) => [r.id, r.name])),
-    tasks: new Map(repo.list(resources.tasks).map((r) => [r.id, r.title])),
+    projects: new Map(store.list(resources.projects).map((r) => [r.id, r.name])),
+    contributors: new Map(store.list(resources.contributors).map((r) => [r.id, r.name])),
+    tasks: new Map(store.list(resources.tasks).map((r) => [r.id, r.title])),
+    budget_lines: new Map(store.list(resources.budget_lines).map((r) => [r.id, r.name])),
   };
 
   const sheets = SHEETS.map((spec) => {
-    const records = template ? [] : repo.list(resources[spec.resource]);
+    const records = template ? [] : store.list(resources[spec.resource]);
     return {
       name: spec.name,
       columns: spec.columns.map((c) => ({ header: c.header, type: columnType(spec, c), width: c.width })),
@@ -119,11 +136,13 @@ function helpSheet() {
   const rows = [
     ['Mode d\'emploi', '', '', ''],
     ['• Une ligne = un élément. La première ligne de chaque onglet contient les en-têtes.', '', '', ''],
-    ['• Les liens se font par le nom : colonne « Projet » = nom exact du projet, « Responsable » = nom du contributeur.', '', '', ''],
+    ['• Les liens se font par le nom : colonne « Projet » = nom exact du projet, « Poste » = nom du poste budgétaire du projet, « Responsable » = nom du contributeur.', '', '', ''],
+    ['• Engagements : le montant engagé est le montant commandé / signé ; le montant réalisé est la part déjà facturée ou payée (≤ engagé).', '', '', ''],
+    ['• Si la colonne « Montant réalisé » est absente, chaque ligne est considérée comme entièrement réalisée (dépense payée).', '', '', ''],
     ['• Colonne ID : laissez-la vide pour créer un élément ; conservez-la pour mettre à jour un élément existant.', '', '', ''],
     ['• Import en mode « fusion » : une cellule vide ne modifie pas la valeur existante.', '', '', ''],
     ['• Dates au format JJ/MM/AAAA (ou cellules au format date Excel). Montants en euros.', '', '', ''],
-    ['• Les onglets sont importés dans l\'ordre : Contributeurs, Projets, Tâches, Jalons, Dépenses.', '', '', ''],
+    ['• Les onglets sont importés dans l\'ordre : Contributeurs, Projets, Postes budgétaires, Tâches, Jalons, Engagements.', '', '', ''],
     ['', '', '', ''],
     ['Onglet', 'Colonne', 'Obligatoire', 'Valeurs possibles / format'],
   ];
@@ -202,13 +221,14 @@ function matchColumns(spec, headerRow) {
  * Avec `dryRun`, rien n'est enregistré : le rapport indique ce qui serait fait.
  * En cas d'erreur, rien n'est enregistré.
  */
-export function importWorkbook(repo, buffer, { mode = 'merge', dryRun = false } = {}) {
-  if (!['merge', 'replace'].includes(mode)) throw new HttpError(400, 'Mode d\'import inconnu');
+export function importWorkbook(store, buffer, { mode = 'merge', dryRun = false } = {}) {
+  if (!['merge', 'replace'].includes(mode)) throw new AppError('Mode d\'import inconnu');
   let book;
   try {
     book = readXlsx(buffer);
   } catch (err) {
-    throw new HttpError(400, err instanceof XlsxError ? err.message : 'Fichier Excel illisible');
+    if (err instanceof XlsxError || err instanceof ZipError) throw new AppError("Le fichier n'est pas un classeur Excel (.xlsx) valide ou il est endommagé");
+    throw err;
   }
 
   const found = SHEETS.map((spec) => ({
@@ -216,43 +236,44 @@ export function importWorkbook(repo, buffer, { mode = 'merge', dryRun = false } 
     sheet: book.sheets.find((s) => norm(s.name) === norm(spec.name) || spec.aliases.includes(norm(s.name))),
   }));
   if (!found.some((f) => f.sheet)) {
-    throw new HttpError(400, `Aucun onglet reconnu dans le fichier. Onglets attendus : ${SHEETS.map((s) => s.name).join(', ')}.`);
+    throw new AppError(`Aucun onglet reconnu dans le fichier. Onglets attendus : ${SHEETS.map((s) => s.name).join(', ')}.`);
   }
 
-  const report = { mode, dryRun, saved: false, sheets: [], errors: [], warnings: [] };
-  const addError = (e) => { if (report.errors.length < MAX_ERRORS) report.errors.push(e); };
+  const storert = { mode, dryRun, saved: false, sheets: [], errors: [], warnings: [] };
+  const addError = (e) => { if (storert.errors.length < MAX_ERRORS) storert.errors.push(e); };
 
-  repo.transaction(() => {
-    if (mode === 'replace') repo.wipe();
+  store.transaction(() => {
+    if (mode === 'replace') store.wipe();
     for (const { spec, sheet } of found) {
       if (!sheet) {
-        if (mode === 'replace') report.warnings.push(`Onglet « ${spec.name} » absent du fichier : cette table sera vide.`);
+        if (mode === 'replace') storert.warnings.push(`Onglet « ${spec.name} » absent du fichier : cette table sera vide.`);
         continue;
       }
-      report.sheets.push(importSheet(repo, spec, sheet, book.date1904, mode, addError, report.warnings));
+      storert.sheets.push(importSheet(store, spec, sheet, book.date1904, mode, addError, storert.warnings));
     }
-  }, { rollback: () => dryRun || report.errors.length > 0 });
+  }, { rollback: () => dryRun || storert.errors.length > 0 });
 
-  report.saved = !dryRun && report.errors.length === 0;
-  return report;
+  storert.saved = !dryRun && storert.errors.length === 0;
+  return storert;
 }
 
-function lookupTables(repo) {
+function lookupTables(store) {
   const byName = (rows, key) => {
     const map = new Map();
     for (const r of rows) if (!map.has(norm(r[key]))) map.set(norm(r[key]), r.id);
     return map;
   };
-  const tasks = repo.list(resources.tasks);
+  const tasks = store.list(resources.tasks);
   return {
-    projects: byName(repo.list(resources.projects), 'name'),
-    contributors: byName(repo.list(resources.contributors), 'name'),
+    projects: byName(store.list(resources.projects), 'name'),
+    contributors: byName(store.list(resources.contributors), 'name'),
     tasks: new Map(tasks.map((t) => [`${t.project_id}|${norm(t.title)}`, t.id]).reverse()),
-    projectIds: new Set(repo.list(resources.projects).map((p) => p.id)),
+    budget_lines: new Map(store.list(resources.budget_lines).map((l) => [`${l.project_id}|${norm(l.name)}`, l.id]).reverse()),
+    projectIds: new Set(store.list(resources.projects).map((p) => p.id)),
   };
 }
 
-function importSheet(repo, spec, sheet, date1904, mode, addError, warnings) {
+function importSheet(store, spec, sheet, date1904, mode, addError, warnings) {
   const def = resources[spec.resource];
   const result = { sheet: sheet.name, resource: spec.resource, label: spec.name, created: 0, updated: 0, rows: 0 };
   const headerIndex = sheet.rows.findIndex((r) => r.some((v) => v !== null && String(v).trim() !== ''));
@@ -267,10 +288,11 @@ function importSheet(repo, spec, sheet, date1904, mode, addError, warnings) {
     return result;
   }
 
-  const lookups = lookupTables(repo);
+  const lookups = lookupTables(store);
+  const hasInvoicedColumn = mapping.some((m) => m.col.key === 'amount_invoiced');
   const seen = new Map(); // clé naturelle -> id (éléments existants ou déjà importés)
   if (spec.naturalKey && mode === 'merge') {
-    for (const r of repo.list(def)) {
+    for (const r of store.list(def)) {
       const k = spec.naturalKey(r);
       if (!seen.has(k)) seen.set(k, r.id);
     }
@@ -283,7 +305,7 @@ function importSheet(repo, spec, sheet, date1904, mode, addError, warnings) {
     const rowNumber = i + 1;
     try {
       const { body, rowId } = convertRow(spec, mapping, cells, lookups, date1904);
-      let targetId = rowId && repo.findById(def, rowId) ? rowId : null;
+      let targetId = rowId && store.findById(def, rowId) ? rowId : null;
       if (!targetId && spec.naturalKey) {
         // La clé est calculée sur les valeurs normalisées (dates, montants…) pour être comparable.
         const probe = validate(def, body, { partial: true }).data ?? body;
@@ -293,18 +315,23 @@ function importSheet(repo, spec, sheet, date1904, mode, addError, warnings) {
       if (targetId) {
         // Une cellule vide ne remplace pas une valeur existante.
         const changes = Object.fromEntries(Object.entries(body).filter(([, v]) => v !== null));
-        saved = repo.update(def, targetId, changes);
+        saved = store.update(def, targetId, changes);
         result.updated++;
       } else {
-        saved = repo.create(def, body, { id: rowId ?? undefined });
+        // Sans colonne « Montant réalisé », une dépense importée est considérée comme payée.
+        if (spec.resource === 'expenses' && !hasInvoicedColumn && body.amount_invoiced === undefined) {
+          body.amount_invoiced = body.amount_committed;
+        }
+        saved = store.create(def, body, { id: rowId ?? undefined });
         result.created++;
       }
       if (spec.naturalKey) seen.set(spec.naturalKey(saved), saved.id);
       if (spec.resource === 'tasks') lookups.tasks.set(`${saved.project_id}|${norm(saved.title)}`, saved.id);
+      if (spec.resource === 'budget_lines') lookups.budget_lines.set(`${saved.project_id}|${norm(saved.name)}`, saved.id);
     } catch (err) {
       if (err instanceof CellError) {
         addError({ sheet: sheet.name, row: rowNumber, column: err.column, message: err.message });
-      } else if (err instanceof HttpError) {
+      } else if (err instanceof AppError) {
         const details = Object.entries(err.details ?? {});
         if (!details.length) addError({ sheet: sheet.name, row: rowNumber, message: err.message });
         for (const [field, message] of details) {
@@ -374,9 +401,12 @@ function convertRow(spec, mapping, cells, lookups, date1904) {
 function resolveLookup(col, raw, body, lookups) {
   const n = norm(raw);
   let found;
-  if (col.lookup === 'tasks') {
-    found = lookups.tasks.get(`${body.project_id}|${n}`);
-    if (!found) throw new CellError(col.header, `Tâche « ${raw} » introuvable dans ce projet`);
+  if (col.lookup === 'tasks' || col.lookup === 'budget_lines') {
+    found = lookups[col.lookup].get(`${body.project_id}|${n}`);
+    if (!found) {
+      const what = col.lookup === 'tasks' ? 'Tâche' : 'Poste';
+      throw new CellError(col.header, `${what} « ${raw} » introuvable dans ce projet${col.lookup === 'budget_lines' ? " (vérifiez l'onglet Postes budgétaires)" : ''}`);
+    }
     return found;
   }
   found = lookups[col.lookup].get(n);

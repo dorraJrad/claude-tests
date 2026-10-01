@@ -1,0 +1,3832 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Pilotage de projets</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%233b5bdb'/%3E%3Cpath d='M9 22V10h7a4 4 0 010 8h-7' stroke='white' stroke-width='3' fill='none'/%3E%3C/svg%3E">
+  <style>
+:root {
+  --bg: #f5f6fa;
+  --surface: #ffffff;
+  --surface-2: #f0f2f7;
+  --border: #e2e5ee;
+  --text: #1c2233;
+  --muted: #667085;
+  --primary: #3b5bdb;
+  --primary-hover: #2f4ac0;
+  --primary-soft: #e7ecfd;
+  --success: #2b8a3e;
+  --success-soft: #e3f5e7;
+  --warning: #b35c00;
+  --warning-soft: #fff1dc;
+  --danger: #c92a2a;
+  --danger-soft: #fde8e8;
+  --info: #1971c2;
+  --info-soft: #e1efff;
+  --milestone: #7048e8;
+  --milestone-soft: #efe9ff;
+  --sidebar: #161b2e;
+  --sidebar-text: #c5cbe0;
+  --radius: 10px;
+  --shadow: 0 1px 2px rgb(16 24 40 / 6%), 0 1px 3px rgb(16 24 40 / 8%);
+  color-scheme: light;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #0f1320;
+    --surface: #181d2d;
+    --surface-2: #20263a;
+    --border: #2c3349;
+    --text: #e6e9f2;
+    --muted: #97a0b8;
+    --primary: #6f8cff;
+    --primary-hover: #8aa1ff;
+    --primary-soft: #253058;
+    --success: #5cc97a;
+    --success-soft: #1d3527;
+    --warning: #f0a44b;
+    --warning-soft: #3a2c19;
+    --danger: #ff7b7b;
+    --danger-soft: #3d2023;
+    --info: #6cb4ff;
+    --info-soft: #1c2d45;
+    --milestone: #a78bfa;
+    --milestone-soft: #2e2550;
+    --sidebar: #0a0d17;
+    --shadow: 0 1px 2px rgb(0 0 0 / 40%);
+    color-scheme: dark;
+  }
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  font: 14px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+}
+
+a { color: var(--primary); text-decoration: none; }
+a:hover { text-decoration: underline; }
+h1, h2, h3 { margin: 0; line-height: 1.25; }
+h1 { font-size: 1.6rem; }
+h2 { font-size: 1.05rem; }
+h3 { font-size: .95rem; }
+
+/* --- Mise en page ------------------------------------------------------ */
+
+.layout { display: grid; grid-template-columns: 230px 1fr; min-height: 100vh; }
+
+.sidebar {
+  background: var(--sidebar);
+  color: var(--sidebar-text);
+  padding: 20px 14px;
+  position: sticky;
+  top: 0;
+  height: 100vh;
+}
+.brand { display: flex; align-items: center; gap: 10px; color: #fff; font-weight: 700; line-height: 1.1; margin: 0 6px 28px; }
+.brand:hover { text-decoration: none; }
+.brand small { font-weight: 400; color: var(--sidebar-text); }
+.brand-mark {
+  display: grid; place-items: center; width: 36px; height: 36px; border-radius: 9px;
+  background: #3b5bdb; color: #fff; font-size: 1.1rem;
+}
+.sidebar nav { display: flex; flex-direction: column; gap: 2px; }
+.sidebar nav a { color: var(--sidebar-text); padding: 9px 12px; border-radius: 8px; }
+.sidebar nav a:hover { background: rgb(255 255 255 / 6%); text-decoration: none; color: #fff; }
+.sidebar nav a.is-active { background: rgb(255 255 255 / 10%); color: #fff; font-weight: 600; }
+
+main { padding: 28px 32px 48px; min-width: 0; outline: none; }
+
+.page-header { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; margin-bottom: 20px; }
+.page-header p { margin: 4px 0 0; }
+.page-header .meta { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 8px; }
+.description { max-width: 70ch; }
+.back { display: inline-block; margin-bottom: 8px; }
+
+.grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 20px; }
+.grid-2 > .card { margin-bottom: 0; }
+.grid-wide-left { grid-template-columns: 2fr 1fr; }
+.grid-wide-right { grid-template-columns: 1fr 2fr; }
+
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: 18px;
+  margin-bottom: 20px;
+  min-width: 0;
+}
+.card-header { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 14px; }
+
+.toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; margin-bottom: 16px; }
+.spacer { flex: 1; }
+.grow { flex: 1; min-width: 0; }
+
+/* --- Composants -------------------------------------------------------- */
+
+.btn {
+  display: inline-flex; align-items: center; gap: 6px;
+  border: 1px solid var(--border); background: var(--surface); color: var(--text);
+  padding: 8px 14px; border-radius: 8px; font: inherit; font-weight: 500; cursor: pointer; white-space: nowrap;
+}
+.btn:hover { background: var(--surface-2); text-decoration: none; }
+.btn:disabled { opacity: .6; cursor: progress; }
+.btn-primary { background: var(--primary); border-color: var(--primary); color: #fff; }
+.btn-primary:hover { background: var(--primary-hover); }
+.btn-ghost { background: transparent; border-color: transparent; }
+.btn-danger-ghost { background: transparent; border-color: transparent; color: var(--danger); }
+.btn-danger-ghost:hover { background: var(--danger-soft); }
+.btn-small { padding: 5px 10px; font-size: .85rem; }
+.icon-btn { background: none; border: 0; font-size: 1.5rem; line-height: 1; cursor: pointer; color: var(--muted); }
+
+.badge {
+  display: inline-block; padding: 1px 8px; border-radius: 999px; font-size: .75rem; font-weight: 600;
+  background: var(--surface-2); color: var(--muted); white-space: nowrap; vertical-align: middle;
+}
+.badge-success { background: var(--success-soft); color: var(--success); }
+.badge-warning { background: var(--warning-soft); color: var(--warning); }
+.badge-danger { background: var(--danger-soft); color: var(--danger); }
+.badge-info { background: var(--info-soft); color: var(--info); }
+.badge-milestone { background: var(--milestone-soft); color: var(--milestone); }
+
+.muted { color: var(--muted); }
+.small { font-size: .82rem; }
+.text-danger { color: var(--danger); font-weight: 600; }
+.num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.count {
+  display: inline-block; min-width: 22px; padding: 0 6px; border-radius: 999px; text-align: center;
+  background: var(--surface-2); color: var(--muted); font-size: .78rem; font-weight: 600;
+}
+
+.stats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px; margin-bottom: 20px; }
+.stat {
+  background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+  box-shadow: var(--shadow); padding: 16px; border-top: 3px solid var(--primary);
+}
+.stat-success { border-top-color: var(--success); }
+.stat-warning { border-top-color: var(--warning); }
+.stat-danger { border-top-color: var(--danger); }
+.stat-label { color: var(--muted); font-size: .82rem; font-weight: 500; }
+.stat-value { font-size: 1.6rem; font-weight: 700; margin: 2px 0 6px; font-variant-numeric: tabular-nums; }
+.stat-hint { color: var(--muted); font-size: .8rem; display: grid; gap: 6px; }
+
+.progress { height: 8px; background: var(--surface-2); border-radius: 999px; overflow: hidden; }
+.progress-fill { height: 100%; border-radius: inherit; background: var(--primary); transition: width .3s; }
+.progress-info .progress-fill { background: var(--primary); }
+.progress-success .progress-fill { background: var(--success); }
+.progress-warning .progress-fill { background: var(--warning); }
+.progress-danger .progress-fill { background: var(--danger); }
+
+.avatar {
+  display: inline-grid; place-items: center; flex: none; width: 28px; height: 28px; border-radius: 50%;
+  background: var(--primary-soft); color: var(--primary); font-size: .72rem; font-weight: 700;
+}
+.avatar-empty { background: var(--surface-2); color: var(--muted); }
+.person { display: flex; align-items: center; gap: 10px; }
+
+.empty { text-align: center; padding: 36px 16px; color: var(--muted); }
+.empty h1 { color: var(--text); margin-bottom: 8px; }
+.loading { color: var(--muted); }
+.hint { margin-top: 12px; }
+
+/* --- Tableaux ---------------------------------------------------------- */
+
+.table-wrap { overflow-x: auto; }
+.table { width: 100%; border-collapse: collapse; }
+.table th {
+  text-align: left; font-size: .75rem; text-transform: uppercase; letter-spacing: .03em;
+  color: var(--muted); font-weight: 600; padding: 8px 10px; border-bottom: 1px solid var(--border);
+}
+.table td { padding: 10px; border-bottom: 1px solid var(--border); vertical-align: middle; }
+.table tbody tr:last-child td { border-bottom: 0; }
+.table tfoot td { font-weight: 700; border-top: 2px solid var(--border); border-bottom: 0; }
+.table-hover tbody tr { cursor: pointer; }
+.table-hover tbody tr:hover { background: var(--surface-2); }
+.w-bar { min-width: 140px; }
+.w-bar .progress { margin-bottom: 4px; }
+
+/* --- Projets ----------------------------------------------------------- */
+
+.segmented { display: inline-flex; background: var(--surface-2); border-radius: 9px; padding: 3px; flex-wrap: wrap; }
+.segmented button {
+  border: 0; background: none; padding: 6px 12px; border-radius: 7px; font: inherit; color: var(--muted); cursor: pointer;
+}
+.segmented button.is-active { background: var(--surface); color: var(--text); font-weight: 600; box-shadow: var(--shadow); }
+
+.project-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 18px; }
+.project-card { display: flex; flex-direction: column; gap: 8px; color: inherit; margin: 0; transition: border-color .15s; }
+.project-card:hover { text-decoration: none; border-color: var(--primary); }
+.project-card-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; }
+.project-card p { margin: 0; color: var(--muted); }
+.clamp { display: -webkit-box; -webkit-line-clamp: 2; line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.metric { display: flex; justify-content: space-between; font-size: .82rem; color: var(--muted); margin-top: 4px; }
+.project-card-foot {
+  display: flex; justify-content: space-between; gap: 8px; flex-wrap: wrap;
+  border-top: 1px solid var(--border); padding-top: 10px; margin-top: auto; color: var(--muted);
+}
+
+.tabs { display: flex; gap: 4px; border-bottom: 1px solid var(--border); margin-bottom: 20px; overflow-x: auto; }
+.tabs a { padding: 10px 14px; color: var(--muted); border-bottom: 2px solid transparent; margin-bottom: -1px; white-space: nowrap; }
+.tabs a:hover { color: var(--text); text-decoration: none; }
+.tabs a.is-active { color: var(--primary); border-bottom-color: var(--primary); font-weight: 600; }
+
+/* --- Kanban ------------------------------------------------------------ */
+
+.kanban { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; align-items: start; }
+.kanban-col {
+  background: var(--surface-2); border-radius: var(--radius); padding: 12px;
+  border: 2px dashed transparent; transition: border-color .15s, background .15s;
+}
+.kanban-col.is-over { border-color: var(--primary); background: var(--primary-soft); }
+.kanban-col > header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+.kanban-items { display: flex; flex-direction: column; gap: 10px; min-height: 60px; }
+.kanban-empty { text-align: center; padding: 16px 0; margin: 0; }
+.task-card {
+  background: var(--surface); border: 1px solid var(--border); border-left: 3px solid var(--primary);
+  border-radius: 8px; padding: 10px 12px; cursor: grab; box-shadow: var(--shadow);
+}
+.task-card:hover { border-color: var(--primary); }
+.task-card.is-overdue { border-left-color: var(--danger); }
+.task-card.is-dragging { opacity: .5; }
+[data-status="done"] .task-card { border-left-color: var(--success); }
+[data-status="done"] .task-title { text-decoration: line-through; color: var(--muted); }
+.task-title { font-weight: 600; margin-bottom: 8px; }
+.task-meta { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.inline { display: inline-flex; align-items: center; gap: 8px; color: var(--muted); }
+
+select, input, textarea {
+  font: inherit; color: var(--text); background: var(--surface);
+  border: 1px solid var(--border); border-radius: 8px; padding: 7px 10px;
+}
+select:focus, input:focus, textarea:focus { outline: 2px solid var(--primary-soft); border-color: var(--primary); }
+
+/* --- Échéances --------------------------------------------------------- */
+
+.deadlines, .milestones { list-style: none; margin: 0; padding: 0; }
+.deadline, .milestones li { display: flex; align-items: center; gap: 12px; padding: 10px 4px; border-bottom: 1px solid var(--border); }
+.deadline:last-child, .milestones li:last-child { border-bottom: 0; }
+.deadline-date { display: flex; flex-direction: column; width: 96px; flex: none; font-size: .82rem; }
+.deadline-main { flex: 1; min-width: 0; }
+.deadline.is-overdue { background: linear-gradient(90deg, var(--danger-soft), transparent 60%); }
+.milestones li.is-done strong { text-decoration: line-through; color: var(--muted); }
+.check { width: 18px; height: 18px; accent-color: var(--success); cursor: pointer; flex: none; }
+
+/* --- Planning (Gantt) -------------------------------------------------- */
+
+.gantt { position: relative; font-size: .82rem; }
+.gantt-row { display: grid; grid-template-columns: 190px 1fr; align-items: center; min-height: 34px; border-bottom: 1px solid var(--border); }
+.gantt-row:last-of-type { border-bottom: 0; }
+.gantt-label { display: flex; flex-direction: column; padding-right: 10px; overflow: hidden; }
+.gantt-label a { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.gantt-track { position: relative; height: 100%; min-height: 34px; }
+.gantt-scale { min-height: 24px; }
+.gantt-month { position: absolute; top: 4px; color: var(--muted); border-left: 1px solid var(--border); padding-left: 4px; white-space: nowrap; }
+.gantt-bar { position: absolute; top: 9px; height: 16px; border-radius: 5px; background: var(--muted); }
+.gantt-bar.status-todo, .swatch.status-todo { background: #98a2b3; }
+.gantt-bar.status-in_progress, .swatch.status-in_progress { background: var(--primary); }
+.gantt-bar.status-done, .swatch.status-done { background: var(--success); }
+.gantt-bar.is-overdue, .swatch.is-overdue { background: var(--danger); }
+.gantt-diamond {
+  position: absolute; top: 11px; width: 12px; height: 12px; margin-left: -6px;
+  background: var(--milestone); transform: rotate(45deg);
+}
+.gantt-diamond.is-done { background: var(--success); }
+.gantt-diamond.is-overdue { background: var(--danger); }
+.gantt-overlay { position: absolute; inset: 0; display: grid; grid-template-columns: 190px 1fr; pointer-events: none; }
+.gantt-overlay .gantt-track { pointer-events: none; }
+.gantt-today { position: absolute; top: 0; bottom: 0; width: 2px; margin-left: -1px; background: var(--warning); }
+.gantt-end { position: absolute; top: 0; bottom: 0; border-left: 2px dashed var(--muted); opacity: .6; }
+.legend { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 12px; margin-top: 12px; }
+.swatch { display: inline-block; width: 14px; height: 10px; border-radius: 3px; margin-right: -6px; }
+.swatch.today { width: 3px; background: var(--warning); }
+
+/* --- Budget ------------------------------------------------------------ */
+
+.kv { display: grid; grid-template-columns: 1fr auto; gap: 8px 16px; margin: 0 0 14px; }
+.kv dt { color: var(--muted); }
+.kv dd { margin: 0; text-align: right; font-weight: 600; font-variant-numeric: tabular-nums; }
+.subhead { margin: 20px 0 10px; }
+.bars { list-style: none; padding: 0; margin: 0; display: grid; gap: 8px; }
+.bars li { display: grid; grid-template-columns: 90px 1fr auto; align-items: center; gap: 10px; font-size: .85rem; }
+.hbar { height: 10px; background: var(--surface-2); border-radius: 999px; overflow: hidden; }
+.hbar div { height: 100%; background: var(--milestone); border-radius: inherit; }
+
+/* --- Fenêtre modale ---------------------------------------------------- */
+
+dialog {
+  border: 0; border-radius: 14px; padding: 0; width: min(600px, calc(100vw - 32px));
+  background: var(--surface); color: var(--text); box-shadow: 0 20px 50px rgb(0 0 0 / 25%);
+}
+dialog::backdrop { background: rgb(15 19 32 / 55%); }
+.modal-form > header, .modal-form > footer { display: flex; align-items: center; gap: 8px; padding: 16px 20px; }
+.modal-form > header { justify-content: space-between; border-bottom: 1px solid var(--border); }
+.modal-form > footer { border-top: 1px solid var(--border); }
+.form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px 16px; padding: 18px 20px; }
+.field { display: flex; flex-direction: column; gap: 5px; font-size: .85rem; font-weight: 500; }
+.field.full { grid-column: 1 / -1; }
+.field-check { flex-direction: row; align-items: center; align-self: end; gap: 8px; padding-bottom: 8px; }
+.field-check .field-error { flex-basis: 100%; }
+.field-error { color: var(--danger); font-weight: 500; min-height: 0; }
+.field-error:empty { display: none; }
+.form-error { margin: 0 20px 12px; padding: 10px 12px; border-radius: 8px; background: var(--danger-soft); color: var(--danger); }
+
+#toasts { position: fixed; right: 20px; bottom: 20px; display: flex; flex-direction: column; gap: 8px; z-index: 100; }
+.toast {
+  padding: 10px 16px; border-radius: 8px; color: #fff; background: #344054; box-shadow: var(--shadow);
+  animation: toast-in .2s ease-out;
+}
+.toast-success { background: var(--success); }
+.toast-danger { background: var(--danger); }
+@keyframes toast-in { from { transform: translateY(10px); opacity: 0; } }
+
+/* --- Données (import / export / éditeur) ------------------------------- */
+
+.stats-5 { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+.stat-compact { padding: 12px 14px; }
+.stat-compact .stat-value { font-size: 1.3rem; margin: 0; }
+.stack { display: flex; flex-direction: column; gap: 20px; min-width: 0; }
+.stack > .card { margin-bottom: 0; }
+.steps { margin: 0 0 14px; padding-left: 18px; display: grid; gap: 4px; }
+.actions { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-top: 14px; }
+.actions.center { justify-content: center; }
+
+.dropzone {
+  display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 22px 16px;
+  border: 2px dashed var(--border); border-radius: var(--radius); cursor: pointer; text-align: center;
+  background: var(--surface-2); transition: border-color .15s, background .15s;
+}
+.dropzone:hover, .dropzone.is-over { border-color: var(--primary); background: var(--primary-soft); }
+.dropzone strong { color: var(--primary); word-break: break-all; }
+
+.modes { border: 0; padding: 0; margin: 14px 0 0; display: grid; gap: 8px; }
+.modes label { display: flex; gap: 10px; align-items: flex-start; padding: 10px 12px; border: 1px solid var(--border); border-radius: 8px; cursor: pointer; }
+.modes label:has(input:checked) { border-color: var(--primary); background: var(--primary-soft); }
+.modes input { margin-top: 3px; accent-color: var(--primary); }
+
+.report { margin-top: 18px; border-top: 1px solid var(--border); padding-top: 14px; }
+.report h3 { margin-bottom: 10px; }
+.warnings { margin: 10px 0 0; padding-left: 18px; color: var(--warning); }
+.errors { max-height: 320px; overflow-y: auto; margin-top: 8px; }
+
+.btn-danger { background: var(--danger); border-color: var(--danger); color: #fff; }
+.btn-danger:hover { background: var(--danger); filter: brightness(1.1); }
+.danger-zone { border-color: var(--danger-soft); }
+.icon-btn.danger { font-size: 1rem; opacity: .6; }
+.icon-btn.danger:hover { opacity: 1; }
+
+.grid-wrap { max-height: 70vh; overflow: auto; border: 1px solid var(--border); border-radius: 8px; }
+.data-grid { font-size: .85rem; }
+.data-grid thead th { position: sticky; top: 0; background: var(--surface); z-index: 1; white-space: nowrap; }
+.data-grid td { padding: 3px 4px; }
+.data-grid td > input:not([type=checkbox]), .data-grid td > select {
+  width: 100%; min-width: 90px; border-color: transparent; background: transparent; padding: 5px 6px; border-radius: 6px;
+}
+.data-grid td > input:hover, .data-grid td > select:hover { border-color: var(--border); }
+.data-grid td > input:focus, .data-grid td > select:focus { background: var(--surface); }
+.data-grid .col-text input { min-width: 160px; }
+.data-grid .col-wide input { min-width: 240px; }
+.data-grid .col-ref select { min-width: 170px; }
+.data-grid .col-date input { min-width: 135px; }
+.data-grid .col-number input { min-width: 90px; text-align: right; }
+.data-grid tbody tr:hover { background: var(--surface-2); }
+.data-grid td.is-saved { animation: saved 1.2s ease-out; }
+.data-grid td.is-invalid > * { border-color: var(--danger) !important; }
+@keyframes saved { from { background: var(--success-soft); } to { background: transparent; } }
+input[type=search] { min-width: 220px; }
+
+/* --- Sauvegarde (barre latérale) ---------------------------------------- */
+
+.sidebar { display: flex; flex-direction: column; overflow-y: auto; }
+.save-panel { margin-top: auto; padding: 14px 6px 0; border-top: 1px solid rgb(255 255 255 / 10%); display: grid; gap: 10px; }
+.save-status { display: grid; gap: 3px; font-size: .78rem; line-height: 1.35; color: var(--sidebar-text); word-break: break-word; }
+.save-status .warn { color: #ffc078; }
+.save-status .ok { color: #8ce99a; }
+.save-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+.version { color: rgb(255 255 255 / 35%); font-size: .7rem; }
+.btn-sidebar { background: transparent; color: #fff; border-color: rgb(255 255 255 / 25%); }
+.btn-sidebar:hover { background: rgb(255 255 255 / 8%); }
+
+/* --- Budget --------------------------------------------------------------- */
+
+.stats-auto { grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); }
+.gauge { position: relative; display: flex; height: 22px; border-radius: 6px; overflow: hidden; background: var(--surface-2); }
+.gauge > span { display: block; height: 100%; }
+.gauge-invoiced { background: var(--success); }
+.gauge-committed { background: var(--primary); }
+.gauge-available { background: var(--surface-2); }
+.swatch.gauge-available { background: var(--border); }
+.gauge-limit { position: absolute; top: -2px; bottom: -2px; width: 3px; margin-left: -1px; background: var(--danger); }
+.gauge:has(.gauge-limit) .gauge-committed { background: linear-gradient(90deg, var(--primary), var(--danger)); }
+.alerts { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.alert { padding: 8px 12px; border-radius: 8px; font-size: .88rem; border-left: 4px solid; margin: 0; }
+.alert a { color: inherit; }
+.alert-danger { background: var(--danger-soft); color: var(--danger); border-color: var(--danger); }
+.alert-warning { background: var(--warning-soft); color: var(--warning); border-color: var(--warning); }
+.alert-info { background: var(--info-soft); color: var(--info); border-color: var(--info); }
+.alert-success { background: var(--success-soft); color: var(--success); border-color: var(--success); }
+.row-muted td { color: var(--muted); }
+.toolbar-inline { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.link-btn { background: none; border: 0; padding: 0 0 0 6px; color: var(--primary); font: inherit; font-size: .78rem; cursor: pointer; text-decoration: underline; }
+
+/* --- Accueil -------------------------------------------------------------- */
+
+.welcome { max-width: 860px; margin: 24px auto; padding: 32px; }
+.welcome h1 { margin-bottom: 8px; }
+.welcome-actions { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; margin: 24px 0; }
+.welcome-choice {
+  display: flex; flex-direction: column; gap: 6px; text-align: left; padding: 16px; cursor: pointer; font: inherit; color: var(--text);
+  background: var(--surface-2); border: 1px solid var(--border); border-radius: var(--radius);
+}
+.welcome-choice:hover { border-color: var(--primary); background: var(--primary-soft); }
+.welcome-choice span { color: var(--muted); font-size: .85rem; }
+
+/* --- Responsive -------------------------------------------------------- */
+
+@media (max-width: 1100px) {
+  .welcome-actions { grid-template-columns: 1fr; }
+  .stats, .stats-5 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .grid-2, .grid-wide-left, .grid-wide-right { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 760px) {
+  .layout { grid-template-columns: 1fr; }
+  .sidebar { position: static; height: auto; padding: 12px 16px; display: flex; flex-direction: column; gap: 8px; }
+  .save-panel { margin-top: 4px; padding-top: 10px; }
+  .welcome-actions { grid-template-columns: 1fr; }
+  .brand { margin: 0; }
+  .sidebar nav { flex-direction: row; overflow-x: auto; }
+  .sidebar nav a { white-space: nowrap; }
+  main { padding: 20px 16px 40px; }
+  .page-header { flex-direction: column; }
+  .stats { grid-template-columns: 1fr; }
+  .stats-5 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .kanban { grid-template-columns: 1fr; }
+  .form-grid { grid-template-columns: 1fr; }
+  .gantt-row, .gantt-overlay { grid-template-columns: 110px 1fr; }
+  .project-grid { grid-template-columns: 1fr; }
+}
+</style>
+</head>
+<body>
+  <div class="layout">
+    <aside class="sidebar">
+      <a class="brand" href="#/">
+        <span class="brand-mark">P</span>
+        <span>Pilotage<br><small>de projets</small></span>
+      </a>
+      <nav>
+        <a href="#/" data-nav="dashboard">Tableau de bord</a>
+        <a href="#/projets" data-nav="projets">Projets</a>
+        <a href="#/pilotage" data-nav="pilotage">Project management</a>
+        <a href="#/echeances" data-nav="echeances">Échéances</a>
+        <a href="#/contributeurs" data-nav="contributeurs">Contributeurs</a>
+        <a href="#/donnees" data-nav="donnees">Données</a>
+      </nav>
+      <section class="save-panel" aria-label="Sauvegarde des données">
+        <div class="save-status" data-save-status></div>
+        <div class="save-actions">
+          <button class="btn btn-primary btn-small" data-save title="Enregistrer toutes les données dans un fichier Excel (Ctrl+S)">Enregistrer</button>
+          <button class="btn btn-small btn-sidebar" data-open title="Ouvrir un fichier de données (.xlsx)">Ouvrir…</button>
+        </div>
+        <small class="version">v1.0.0 · 2026-10-01</small>
+      </section>
+    </aside>
+    <main id="app" tabindex="-1"></main>
+  </div>
+  <dialog id="modal"></dialog>
+  <div id="toasts" aria-live="polite"></div>
+  <script>
+(() => {
+  // src/core/schema.js
+  var EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  var ENUMS = {
+    projectStatus: ["planned", "active", "on_hold", "completed"],
+    taskStatus: ["todo", "in_progress", "done"],
+    priority: ["low", "medium", "high"],
+    category: ["personnel", "prestation", "logiciel", "materiel", "infrastructure", "deplacement", "formation", "provision", "autre"]
+  };
+  var dateOrder = (startKey, endKey, message) => (record) => record[startKey] && record[endKey] && record[endKey] < record[startKey] ? { [endKey]: message } : null;
+  var collator = new Intl.Collator("fr", { sensitivity: "base", numeric: true });
+  var byId = (a, b) => a.id - b.id;
+  var byDate = (key) => (a, b) => a[key] === b[key] ? 0 : !a[key] ? 1 : !b[key] ? -1 : a[key] < b[key] ? -1 : 1;
+  var chain = (...cmps) => (a, b) => {
+    for (const cmp of cmps) {
+      const r = cmp(a, b);
+      if (r) return r;
+    }
+    return 0;
+  };
+  var resources = {
+    projects: {
+      table: "projects",
+      label: "Projets",
+      fields: {
+        name: { type: "text", required: true, max: 200, label: "Nom" },
+        description: { type: "text", max: 5e3, label: "Description", multiline: true },
+        status: { type: "enum", values: ENUMS.projectStatus, default: "planned", label: "Statut", labels: "projectStatus" },
+        start_date: { type: "date", label: "Début" },
+        end_date: { type: "date", label: "Fin" },
+        budget: { type: "number", min: 0, default: 0, label: "Budget global (€)" }
+      },
+      check: dateOrder("start_date", "end_date", "La date de fin doit suivre la date de début"),
+      filters: ["status"],
+      sort: (a, b) => b.id - a.id
+    },
+    contributors: {
+      table: "contributors",
+      label: "Contributeurs",
+      fields: {
+        name: { type: "text", required: true, max: 200, label: "Nom" },
+        email: { type: "text", format: "email", max: 320, label: "E-mail" },
+        role: { type: "text", max: 200, label: "Rôle" },
+        daily_rate: { type: "number", min: 0, default: 0, label: "Taux journalier (€)" }
+      },
+      filters: [],
+      sort: chain((a, b) => collator.compare(a.name, b.name), byId)
+    },
+    budget_lines: {
+      table: "budget_lines",
+      label: "Postes budgétaires",
+      fields: {
+        project_id: { type: "ref", required: true, label: "Projet", ref: "projects", onDelete: "cascade" },
+        name: { type: "text", required: true, max: 200, label: "Poste" },
+        category: { type: "enum", values: ENUMS.category, default: "autre", label: "Nature", labels: "category" },
+        amount: { type: "number", min: 0, default: 0, label: "Budget prévu (€)" },
+        notes: { type: "text", max: 2e3, label: "Commentaire", multiline: true }
+      },
+      filters: ["project_id", "category"],
+      sort: byId
+    },
+    tasks: {
+      table: "tasks",
+      label: "Tâches",
+      fields: {
+        project_id: { type: "ref", required: true, label: "Projet", ref: "projects", onDelete: "cascade" },
+        title: { type: "text", required: true, max: 300, label: "Titre" },
+        description: { type: "text", max: 5e3, label: "Description", multiline: true },
+        status: { type: "enum", values: ENUMS.taskStatus, default: "todo", label: "Statut", labels: "taskStatus" },
+        priority: { type: "enum", values: ENUMS.priority, default: "medium", label: "Priorité", labels: "priority" },
+        assignee_id: { type: "ref", label: "Responsable", ref: "contributors", onDelete: "set null" },
+        start_date: { type: "date", label: "Début" },
+        due_date: { type: "date", label: "Échéance" },
+        estimated_hours: { type: "number", min: 0, default: 0, label: "Charge (h)" }
+      },
+      check: dateOrder("start_date", "due_date", "L'échéance doit suivre la date de début"),
+      filters: ["project_id", "assignee_id", "status"],
+      sort: chain(byDate("due_date"), byId)
+    },
+    milestones: {
+      table: "milestones",
+      label: "Jalons",
+      fields: {
+        project_id: { type: "ref", required: true, label: "Projet", ref: "projects", onDelete: "cascade" },
+        name: { type: "text", required: true, max: 300, label: "Nom" },
+        description: { type: "text", max: 5e3, label: "Description", multiline: true },
+        due_date: { type: "date", required: true, label: "Date" },
+        done: { type: "boolean", default: 0, label: "Atteint" }
+      },
+      filters: ["project_id", "done"],
+      sort: chain(byDate("due_date"), byId)
+    },
+    expenses: {
+      table: "expenses",
+      label: "Engagements & dépenses",
+      fields: {
+        project_id: { type: "ref", required: true, label: "Projet", ref: "projects", onDelete: "cascade" },
+        budget_line_id: { type: "ref", label: "Poste", ref: "budget_lines", onDelete: "set null" },
+        label: { type: "text", required: true, max: 300, label: "Libellé" },
+        supplier: { type: "text", max: 200, label: "Fournisseur" },
+        reference: { type: "text", max: 100, label: "Référence (commande / facture)" },
+        date: { type: "date", required: true, label: "Date" },
+        amount_committed: { type: "number", min: 0, required: true, label: "Montant engagé (€)" },
+        amount_invoiced: { type: "number", min: 0, default: 0, label: "Montant réalisé (€)" },
+        task_id: { type: "ref", label: "Tâche", ref: "tasks", onDelete: "set null" },
+        contributor_id: { type: "ref", label: "Contributeur", ref: "contributors", onDelete: "set null" }
+      },
+      check: (r) => r.amount_invoiced > r.amount_committed ? { amount_invoiced: "Le réalisé ne peut pas dépasser l'engagé : augmentez d'abord le montant engagé" } : null,
+      filters: ["project_id", "budget_line_id", "task_id", "contributor_id"],
+      sort: chain((a, b) => a.date === b.date ? 0 : a.date < b.date ? 1 : -1, (a, b) => b.id - a.id)
+    }
+  };
+  var TABLE_ORDER = ["contributors", "projects", "budget_lines", "tasks", "milestones", "expenses"];
+  function isIsoDate(value) {
+    if (typeof value !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
+    const d = /* @__PURE__ */ new Date(`${value}T00:00:00Z`);
+    return !Number.isNaN(d.getTime()) && d.toISOString().slice(0, 10) === value;
+  }
+  function coerce(field, value) {
+    if (value === void 0 || value === null || typeof value === "string" && value.trim() === "") {
+      return { value: null };
+    }
+    switch (field.type) {
+      case "text": {
+        if (typeof value !== "string") return { error: "Texte attendu" };
+        const s = value.trim();
+        if (field.max && s.length > field.max) return { error: `${field.max} caractères maximum` };
+        if (field.format === "email" && !EMAIL.test(s)) return { error: "Adresse e-mail invalide" };
+        return { value: s };
+      }
+      case "number": {
+        const n = typeof value === "number" ? value : typeof value === "string" ? Number(value.replace(",", ".").replace(/\s/g, "")) : NaN;
+        if (!Number.isFinite(n)) return { error: "Nombre attendu" };
+        if (field.min !== void 0 && n < field.min) return { error: `Doit être supérieur ou égal à ${field.min}` };
+        return { value: Math.round(n * 100) / 100 };
+      }
+      case "ref": {
+        const n = typeof value === "string" ? Number(value) : value;
+        if (!Number.isInteger(n) || n <= 0) return { error: "Identifiant invalide" };
+        return { value: n };
+      }
+      case "date":
+        return isIsoDate(value) ? { value } : { error: "Date invalide (AAAA-MM-JJ)" };
+      case "enum":
+        return field.values.includes(value) ? { value } : { error: "Valeur non autorisée" };
+      case "boolean":
+        if (value === true || value === 1 || value === "1" || value === "true") return { value: 1 };
+        if (value === false || value === 0 || value === "0" || value === "false") return { value: 0 };
+        return { error: "Booléen attendu" };
+      default:
+        throw new Error(`Type de champ inconnu : ${field.type}`);
+    }
+  }
+  function validate(def, input, { partial = false } = {}) {
+    if (!input || typeof input !== "object" || Array.isArray(input)) {
+      return { errors: { _: "Données attendues" } };
+    }
+    const data = {};
+    const errors = {};
+    for (const [key, field] of Object.entries(def.fields)) {
+      if (!Object.hasOwn(input, key)) {
+        if (partial) continue;
+        if (field.required) errors[key] = "Champ obligatoire";
+        else data[key] = field.default ?? null;
+        continue;
+      }
+      const result = coerce(field, input[key]);
+      if (result.error) errors[key] = result.error;
+      else if (result.value === null && field.required) errors[key] = "Champ obligatoire";
+      else data[key] = result.value ?? field.default ?? null;
+    }
+    return Object.keys(errors).length ? { errors } : { data };
+  }
+  function describeSchema() {
+    return Object.fromEntries(Object.entries(resources).map(([name, def]) => [name, {
+      label: def.label,
+      fields: Object.entries(def.fields).map(([key, f]) => ({
+        name: key,
+        label: f.label,
+        type: f.type,
+        required: Boolean(f.required),
+        ...f.default !== void 0 && { default: f.default },
+        ...f.values && { values: f.values, labels: f.labels },
+        ...f.ref && { ref: f.ref },
+        ...f.min !== void 0 && { min: f.min },
+        ...f.format && { format: f.format },
+        ...f.multiline && { multiline: true }
+      }))
+    }]));
+  }
+
+  // src/core/store.js
+  var DATA_VERSION = 2;
+  var AppError = class extends Error {
+    constructor(message, details, status = 400) {
+      super(message);
+      this.details = details;
+      this.status = status;
+    }
+  };
+  var emptyState = () => ({
+    version: DATA_VERSION,
+    seq: Object.fromEntries(TABLE_ORDER.map((t) => [t, 0])),
+    tables: Object.fromEntries(TABLE_ORDER.map((t) => [t, []]))
+  });
+  function normalizeState(input) {
+    const state = emptyState();
+    if (!input || typeof input !== "object" || !input.tables) return state;
+    for (const t of TABLE_ORDER) {
+      const rows = Array.isArray(input.tables[t]) ? input.tables[t] : [];
+      state.tables[t] = rows.filter((r) => r && Number.isInteger(r.id) && r.id > 0).map((r) => ({ ...r }));
+      const maxId = state.tables[t].reduce((m, r) => Math.max(m, r.id), 0);
+      state.seq[t] = Math.max(maxId, Number(input.seq?.[t]) || 0);
+    }
+    return state;
+  }
+  function createStore(initial) {
+    let state = normalizeState(initial);
+    const listeners2 = /* @__PURE__ */ new Set();
+    let batchDepth = 0;
+    let pending = false;
+    function emit() {
+      if (batchDepth) {
+        pending = true;
+        return;
+      }
+      for (const fn of listeners2) fn();
+    }
+    const rowsOf = (def) => state.tables[def.table];
+    const findRow = (def, id2) => rowsOf(def).find((r) => r.id === id2);
+    function findById(def, id2) {
+      const row = findRow(def, Number(id2));
+      return row ? { ...row } : void 0;
+    }
+    function list(def, filters = {}) {
+      const tests = [];
+      for (const key of def.filters) {
+        if (!Object.hasOwn(filters, key) || filters[key] === void 0) continue;
+        const { value, error } = coerce(def.fields[key], filters[key]);
+        if (error) throw new AppError(`Filtre invalide : ${key}`);
+        tests.push((r) => (r[key] ?? null) === value);
+      }
+      return rowsOf(def).filter((r) => tests.every((t) => t(r))).sort(def.sort).map((r) => ({ ...r }));
+    }
+    function checkRecord(def, record) {
+      const errors = def.check?.(record);
+      if (errors) throw new AppError("Données invalides", errors);
+      for (const [key, field] of Object.entries(def.fields)) {
+        if (field.type !== "ref" || record[key] === null || record[key] === void 0) continue;
+        const target = findRow(resources[field.ref], record[key]);
+        if (!target) {
+          throw new AppError("Référence invalide : un élément lié est introuvable", { [key]: `${field.label} introuvable` });
+        }
+        if (key !== "project_id" && record.project_id && target.project_id && target.project_id !== record.project_id) {
+          throw new AppError("Données invalides", { [key]: `${field.label} : appartient à un autre projet` });
+        }
+      }
+    }
+    function create2(def, body, { id: id2 } = {}) {
+      const { data, errors } = validate(def, body);
+      if (errors) throw new AppError("Données invalides", errors);
+      checkRecord(def, data);
+      if (id2 !== void 0 && (!Number.isInteger(id2) || id2 <= 0 || findRow(def, id2))) {
+        throw new AppError("Identifiant déjà utilisé ou invalide", { id: `ID ${id2} déjà utilisé` });
+      }
+      const newId = id2 ?? state.seq[def.table] + 1;
+      state.seq[def.table] = Math.max(state.seq[def.table], newId);
+      const row = { id: newId, ...data, created_at: (/* @__PURE__ */ new Date()).toISOString() };
+      rowsOf(def).push(row);
+      emit();
+      return { ...row };
+    }
+    function update(def, id2, body) {
+      const row = findRow(def, Number(id2));
+      if (!row) throw new AppError("Élément introuvable", void 0, 404);
+      const { data, errors } = validate(def, body, { partial: true });
+      if (errors) throw new AppError("Données invalides", errors);
+      const merged = { ...row, ...data };
+      checkRecord(def, merged);
+      Object.assign(row, data);
+      emit();
+      return { ...row };
+    }
+    function removeRow(def, id2) {
+      const row = findRow(def, id2);
+      if (!row) return false;
+      for (const other of Object.values(resources)) {
+        for (const [key, field] of Object.entries(other.fields)) {
+          if (field.ref !== def.table) continue;
+          for (const dep of rowsOf(other).filter((r) => r[key] === id2)) {
+            if (field.onDelete === "cascade") removeRow(other, dep.id);
+            else dep[key] = null;
+          }
+        }
+      }
+      state.tables[def.table] = rowsOf(def).filter((r) => r.id !== id2);
+      return true;
+    }
+    function remove(def, id2) {
+      if (!removeRow(def, Number(id2))) throw new AppError("Élément introuvable", void 0, 404);
+      emit();
+    }
+    function transaction(fn, { rollback = false } = {}) {
+      const snapshot = structuredClone(state);
+      batchDepth++;
+      let cancel = true;
+      try {
+        const result = fn();
+        cancel = typeof rollback === "function" ? rollback(result) : rollback;
+        return result;
+      } finally {
+        batchDepth--;
+        if (cancel) state = snapshot;
+        if (!batchDepth && pending) {
+          pending = false;
+          if (!cancel) emit();
+        }
+      }
+    }
+    function wipe() {
+      state = emptyState();
+      emit();
+    }
+    function load(json) {
+      state = normalizeState(json);
+      emit();
+    }
+    const counts = () => Object.fromEntries(TABLE_ORDER.map((t) => [t, state.tables[t].length]));
+    return {
+      findById,
+      list,
+      create: create2,
+      update,
+      remove,
+      transaction,
+      wipe,
+      load,
+      counts,
+      toJSON: () => structuredClone(state),
+      all: (table) => state.tables[table],
+      subscribe: (fn) => {
+        listeners2.add(fn);
+        return () => listeners2.delete(fn);
+      }
+    };
+  }
+
+  // src/core/metrics.js
+  var round2 = (n) => Math.round((n || 0) * 100) / 100;
+  var sum = (list, fn) => round2(list.reduce((acc, x) => acc + (fn(x) || 0), 0));
+  var ratio = (a, b) => b > 0 ? a / b : a > 0 ? Infinity : 0;
+  function addDays(iso, days) {
+    const d = /* @__PURE__ */ new Date(`${iso}T00:00:00Z`);
+    d.setUTCDate(d.getUTCDate() + days);
+    return d.toISOString().slice(0, 10);
+  }
+  function expenseStatus(e) {
+    if (e.amount_committed > 0 && e.amount_invoiced >= e.amount_committed) return "done";
+    if (e.amount_invoiced > 0) return "partial";
+    return "committed";
+  }
+  function figures(budget, committed, invoiced) {
+    return {
+      budget: round2(budget),
+      committed: round2(committed),
+      invoiced: round2(invoiced),
+      available: round2(budget - committed),
+      to_pay: round2(committed - invoiced),
+      committed_rate: ratio(committed, budget),
+      invoiced_rate: ratio(invoiced, budget),
+      over: committed > budget + 5e-3
+    };
+  }
+  var lineFigures = (budget, expenses) => figures(budget, sum(expenses, (e) => e.amount_committed), sum(expenses, (e) => e.amount_invoiced));
+  function groupByCategory(lines, expenses) {
+    const lineCategory = new Map(lines.map((l) => [l.id, l.category]));
+    const groups = /* @__PURE__ */ new Map();
+    const bucket = (key) => {
+      if (!groups.has(key)) groups.set(key, { budget: 0, committed: 0, invoiced: 0 });
+      return groups.get(key);
+    };
+    for (const l of lines) bucket(l.category).budget += l.amount;
+    for (const e of expenses) {
+      const g = bucket(lineCategory.get(e.budget_line_id) ?? null);
+      g.committed += e.amount_committed;
+      g.invoiced += e.amount_invoiced;
+    }
+    return [...groups.entries()].map(([category, g]) => ({ category, ...figures(g.budget, g.committed, g.invoiced) })).sort((a, b) => b.budget - a.budget || b.committed - a.committed);
+  }
+  function projectBudget(store2, projectId) {
+    const project2 = store2.all("projects").find((p) => p.id === projectId);
+    if (!project2) return null;
+    const lines = store2.all("budget_lines").filter((l) => l.project_id === projectId).sort(resources.budget_lines.sort);
+    const expenses = store2.all("expenses").filter((e) => e.project_id === projectId);
+    const lineIds = new Set(lines.map((l) => l.id));
+    const unassigned = expenses.filter((e) => !lineIds.has(e.budget_line_id));
+    const byLine = lines.map((l) => ({
+      ...l,
+      ...lineFigures(l.amount, expenses.filter((e) => e.budget_line_id === l.id)),
+      expense_count: expenses.filter((e) => e.budget_line_id === l.id).length
+    }));
+    const allocated = sum(lines, (l) => l.amount);
+    const totals = {
+      ...lineFigures(project2.budget, expenses),
+      allocated,
+      unallocated: round2(project2.budget - allocated),
+      over_allocated: allocated > project2.budget + 5e-3,
+      lines_over: byLine.filter((l) => l.over).length
+    };
+    return {
+      project: project2,
+      totals,
+      lines: byLine,
+      unassigned: unassigned.length ? { ...lineFigures(0, unassigned), expense_count: unassigned.length } : null,
+      byCategory: groupByCategory(lines, expenses),
+      monthly: monthlySeries(expenses, project2.budget)
+    };
+  }
+  function monthlySeries(expenses, budget = 0) {
+    const months = /* @__PURE__ */ new Map();
+    for (const e of expenses) {
+      const m = e.date.slice(0, 7);
+      const row = months.get(m) ?? { month: m, committed: 0, invoiced: 0 };
+      row.committed += e.amount_committed;
+      row.invoiced += e.amount_invoiced;
+      months.set(m, row);
+    }
+    let cumCommitted = 0;
+    let cumInvoiced = 0;
+    return [...months.values()].sort((a, b) => a.month < b.month ? -1 : 1).map((r) => {
+      cumCommitted += r.committed;
+      cumInvoiced += r.invoiced;
+      return {
+        month: r.month,
+        committed: round2(r.committed),
+        invoiced: round2(r.invoiced),
+        cum_committed: round2(cumCommitted),
+        cum_invoiced: round2(cumInvoiced),
+        cum_committed_rate: ratio(cumCommitted, budget)
+      };
+    });
+  }
+  function portfolioBudget(store2, { includeCompleted = true } = {}) {
+    const projects = store2.all("projects").filter((p) => includeCompleted || p.status !== "completed").sort(resources.projects.sort);
+    const rows = projects.map((p) => {
+      const b = projectBudget(store2, p.id);
+      return { ...p, ...b.totals, line_count: b.lines.length, unassigned_committed: b.unassigned?.committed ?? 0 };
+    });
+    const totals = figures(sum(rows, (r) => r.budget), sum(rows, (r) => r.committed), sum(rows, (r) => r.invoiced));
+    totals.allocated = sum(rows, (r) => r.allocated);
+    const ids = new Set(projects.map((p) => p.id));
+    const lines = store2.all("budget_lines").filter((l) => ids.has(l.project_id));
+    const expenses = store2.all("expenses").filter((e) => ids.has(e.project_id));
+    const byCategory = groupByCategory(lines, expenses);
+    return { totals, projects: rows, byCategory, monthly: monthlySeries(expenses, totals.budget) };
+  }
+  function projectHealth(p, today2) {
+    const late = p.end_date && p.end_date < today2 && p.status !== "completed";
+    if (p.committed > p.budget + 5e-3 || late) return "critical";
+    const overdue = p.task_overdue + p.milestone_overdue;
+    if (overdue > 0 || p.lines_over > 0 || p.over_allocated || p.budget > 0 && p.committed > 0.9 * p.budget) return "warning";
+    return "ok";
+  }
+  function projectSummaries(store2, today2, projectId = null) {
+    const contributors2 = new Map(store2.all("contributors").map((c) => [c.id, c]));
+    return store2.all("projects").filter((p) => projectId === null || p.id === projectId).sort(resources.projects.sort).map((p) => {
+      const tasks = store2.all("tasks").filter((t) => t.project_id === p.id);
+      const milestones = store2.all("milestones").filter((m) => m.project_id === p.id);
+      const open2 = tasks.filter((t) => t.status !== "done");
+      const upcoming = [
+        ...open2.filter((t) => t.due_date && t.due_date >= today2).map((t) => t.due_date),
+        ...milestones.filter((m) => !m.done && m.due_date >= today2).map((m) => m.due_date)
+      ].sort();
+      const budget = projectBudget(store2, p.id).totals;
+      const summary = {
+        ...p,
+        task_total: tasks.length,
+        task_done: tasks.length - open2.length,
+        task_in_progress: tasks.filter((t) => t.status === "in_progress").length,
+        task_overdue: open2.filter((t) => t.due_date && t.due_date < today2).length,
+        milestone_total: milestones.length,
+        milestone_done: milestones.filter((m) => m.done).length,
+        milestone_overdue: milestones.filter((m) => !m.done && m.due_date < today2).length,
+        committed: budget.committed,
+        invoiced: budget.invoiced,
+        available: budget.available,
+        to_pay: budget.to_pay,
+        allocated: budget.allocated,
+        over_allocated: budget.over_allocated,
+        lines_over: budget.lines_over,
+        labor_forecast: sum(tasks, (t) => t.estimated_hours * (contributors2.get(t.assignee_id)?.daily_rate || 0) / 8),
+        estimated_hours: sum(tasks, (t) => t.estimated_hours),
+        contributor_count: new Set(tasks.map((t) => t.assignee_id).filter(Boolean)).size,
+        next_deadline: upcoming[0] ?? null,
+        progress: tasks.length ? Math.round((tasks.length - open2.length) * 100 / tasks.length) : 0
+      };
+      summary.health = projectHealth(summary, today2);
+      return summary;
+    });
+  }
+  function deadlines(store2, today2, { projectId = null, until = null } = {}) {
+    const projects = new Map(store2.all("projects").map((p) => [p.id, p]));
+    const contributors2 = new Map(store2.all("contributors").map((c) => [c.id, c]));
+    const items = [
+      ...store2.all("tasks").filter((t) => t.status !== "done" && t.due_date).map((t) => ({
+        kind: "task",
+        id: t.id,
+        name: t.title,
+        due_date: t.due_date,
+        status: t.status,
+        priority: t.priority,
+        project_id: t.project_id,
+        assignee_id: t.assignee_id ?? null,
+        assignee_name: contributors2.get(t.assignee_id)?.name ?? null
+      })),
+      ...store2.all("milestones").filter((m) => !m.done).map((m) => ({
+        kind: "milestone",
+        id: m.id,
+        name: m.name,
+        due_date: m.due_date,
+        status: "todo",
+        priority: null,
+        project_id: m.project_id,
+        assignee_id: null,
+        assignee_name: null
+      }))
+    ];
+    return items.filter((d) => (projectId === null || d.project_id === projectId) && (!until || d.due_date <= until)).map((d) => ({ ...d, project_name: projects.get(d.project_id)?.name ?? "", overdue: d.due_date < today2 })).sort((a, b) => a.due_date !== b.due_date ? a.due_date < b.due_date ? -1 : 1 : a.kind !== b.kind ? a.kind === "task" ? -1 : 1 : a.id - b.id);
+  }
+  function workload(store2, today2) {
+    const tasks = store2.all("tasks");
+    const expenses = store2.all("expenses");
+    return store2.all("contributors").slice().sort(resources.contributors.sort).map((c) => {
+      const mine = tasks.filter((t) => t.assignee_id === c.id);
+      const open2 = mine.filter((t) => t.status !== "done");
+      return {
+        ...c,
+        task_total: mine.length,
+        done_tasks: mine.length - open2.length,
+        open_tasks: open2.length,
+        open_hours: sum(open2, (t) => t.estimated_hours),
+        overdue_tasks: open2.filter((t) => t.due_date && t.due_date < today2).length,
+        project_count: new Set(mine.map((t) => t.project_id)).size,
+        expenses_total: sum(expenses.filter((e) => e.contributor_id === c.id), (e) => e.amount_committed)
+      };
+    });
+  }
+  function dashboard(store2, today2) {
+    const projects = projectSummaries(store2, today2);
+    const open2 = projects.filter((p) => p.status !== "completed");
+    const team = workload(store2, today2);
+    const total = (key) => sum(projects, (p) => p[key]);
+    return {
+      today: today2,
+      totals: {
+        projects_total: projects.length,
+        projects_active: projects.filter((p) => p.status === "active").length,
+        projects_at_risk: open2.filter((p) => p.health !== "ok").length,
+        budget_total: total("budget"),
+        committed_total: total("committed"),
+        invoiced_total: total("invoiced"),
+        tasks_total: total("task_total"),
+        tasks_done: total("task_done"),
+        tasks_overdue: total("task_overdue"),
+        milestones_overdue: total("milestone_overdue"),
+        contributors: team.length
+      },
+      projects,
+      deadlines: deadlines(store2, today2, { until: addDays(today2, 30) }),
+      workload: team
+    };
+  }
+
+  // src/core/labels.js
+  var LABELS = {
+    projectStatus: { planned: "Planifié", active: "En cours", on_hold: "En pause", completed: "Terminé" },
+    taskStatus: { todo: "À faire", in_progress: "En cours", done: "Terminé" },
+    priority: { low: "Basse", medium: "Moyenne", high: "Haute" },
+    category: {
+      personnel: "Personnel interne",
+      prestation: "Prestations externes",
+      logiciel: "Logiciels & licences",
+      materiel: "Matériel",
+      infrastructure: "Infrastructure & hébergement",
+      deplacement: "Déplacements",
+      formation: "Formation",
+      provision: "Provision pour risques",
+      autre: "Autre"
+    },
+    expenseStatus: { committed: "Engagé", partial: "Partiellement réalisé", done: "Soldé" },
+    health: { ok: "Dans les clous", warning: "À surveiller", critical: "Critique" }
+  };
+
+  // src/core/zip.js
+  var ZipError = class extends Error {
+  };
+  var Tree = class {
+    constructor() {
+      this.table = new Uint16Array(16);
+      this.trans = new Uint16Array(288);
+    }
+  };
+  var lengthBits = new Uint8Array(30);
+  var lengthBase = new Uint16Array(30);
+  var distBits = new Uint8Array(30);
+  var distBase = new Uint16Array(30);
+  var CLC_INDEX = [16, 17, 18, 0, 8, 7, 9, 6, 10, 5, 11, 4, 12, 3, 13, 2, 14, 1, 15];
+  function buildBitsBase(bits, base, delta, first) {
+    for (let i = 0; i < delta; i++) bits[i] = 0;
+    for (let i = 0; i < 30 - delta; i++) bits[i + delta] = i / delta | 0;
+    for (let s = first, i = 0; i < 30; i++) {
+      base[i] = s;
+      s += 1 << bits[i];
+    }
+  }
+  buildBitsBase(lengthBits, lengthBase, 4, 3);
+  buildBitsBase(distBits, distBase, 2, 1);
+  lengthBits[28] = 0;
+  lengthBase[28] = 258;
+  var fixedLit = new Tree();
+  var fixedDist = new Tree();
+  (() => {
+    fixedLit.table.set([0, 0, 0, 0, 0, 0, 0, 24, 152, 112]);
+    for (let i = 0; i < 24; i++) fixedLit.trans[i] = 256 + i;
+    for (let i = 0; i < 144; i++) fixedLit.trans[24 + i] = i;
+    for (let i = 0; i < 8; i++) fixedLit.trans[168 + i] = 280 + i;
+    for (let i = 0; i < 112; i++) fixedLit.trans[176 + i] = 144 + i;
+    fixedDist.table[5] = 32;
+    for (let i = 0; i < 32; i++) fixedDist.trans[i] = i;
+  })();
+  var offs = new Uint16Array(16);
+  function buildTree(t, lengths, off, num2) {
+    t.table.fill(0);
+    for (let i = 0; i < num2; i++) t.table[lengths[off + i]]++;
+    t.table[0] = 0;
+    for (let s = 0, i = 0; i < 16; i++) {
+      offs[i] = s;
+      s += t.table[i];
+    }
+    for (let i = 0; i < num2; i++) if (lengths[off + i]) t.trans[offs[lengths[off + i]]++] = i;
+  }
+  function inflateRaw(source, size) {
+    const d = { source, index: 0, tag: 0, bitcount: 0, dest: new Uint8Array(size), length: 0 };
+    const limit = source.length + 4;
+    const refill = () => {
+      while (d.bitcount < 24) {
+        d.tag |= (d.source[d.index++] ?? 0) << d.bitcount;
+        d.bitcount += 8;
+      }
+      if (d.index > limit + 4) throw new ZipError("Données compressées corrompues");
+    };
+    const getBit = () => {
+      if (!d.bitcount--) {
+        d.tag = d.source[d.index++] ?? 0;
+        d.bitcount = 7;
+      }
+      const bit = d.tag & 1;
+      d.tag >>>= 1;
+      return bit;
+    };
+    const readBits = (num2, base) => {
+      if (!num2) return base;
+      refill();
+      const val = d.tag & 65535 >>> 16 - num2;
+      d.tag >>>= num2;
+      d.bitcount -= num2;
+      return val + base;
+    };
+    const decodeSymbol = (t) => {
+      refill();
+      let s = 0;
+      let cur = 0;
+      let len = 0;
+      let tag = d.tag;
+      do {
+        cur = 2 * cur + (tag & 1);
+        tag >>>= 1;
+        if (++len > 15) throw new ZipError("Données compressées corrompues");
+        s += t.table[len];
+        cur -= t.table[len];
+      } while (cur >= 0);
+      d.tag = tag;
+      d.bitcount -= len;
+      return t.trans[s + cur];
+    };
+    const put = (byte) => {
+      if (d.length >= size) throw new ZipError("Données compressées corrompues");
+      d.dest[d.length++] = byte;
+    };
+    const lt = new Tree();
+    const dt = new Tree();
+    const codeTree = new Tree();
+    const lengths = new Uint8Array(288 + 32);
+    const decodeTrees = () => {
+      const hlit = readBits(5, 257);
+      const hdist = readBits(5, 1);
+      const hclen = readBits(4, 4);
+      lengths.fill(0, 0, 19);
+      for (let i = 0; i < hclen; i++) lengths[CLC_INDEX[i]] = readBits(3, 0);
+      buildTree(codeTree, lengths, 0, 19);
+      for (let num2 = 0; num2 < hlit + hdist; ) {
+        const sym = decodeSymbol(codeTree);
+        let repeat;
+        let value = 0;
+        if (sym === 16) {
+          value = lengths[num2 - 1];
+          repeat = readBits(2, 3);
+        } else if (sym === 17) {
+          repeat = readBits(3, 3);
+        } else if (sym === 18) {
+          repeat = readBits(7, 11);
+        } else {
+          lengths[num2++] = sym;
+          continue;
+        }
+        if (num2 + repeat > hlit + hdist) throw new ZipError("Données compressées corrompues");
+        while (repeat--) lengths[num2++] = value;
+      }
+      buildTree(lt, lengths, 0, hlit);
+      buildTree(dt, lengths, hlit, hdist);
+    };
+    const inflateBlock = (lit, dist) => {
+      for (; ; ) {
+        const sym = decodeSymbol(lit);
+        if (sym === 256) return;
+        if (sym < 256) {
+          put(sym);
+          continue;
+        }
+        const s = sym - 257;
+        if (s >= 29) throw new ZipError("Données compressées corrompues");
+        const length = readBits(lengthBits[s], lengthBase[s]);
+        const ds = decodeSymbol(dist);
+        const from = d.length - readBits(distBits[ds], distBase[ds]);
+        if (from < 0) throw new ZipError("Données compressées corrompues");
+        for (let i = from; i < from + length; i++) put(d.dest[i]);
+      }
+    };
+    let final;
+    do {
+      final = getBit();
+      const type = readBits(2, 0);
+      if (type === 0) {
+        while (d.bitcount > 8) {
+          d.index--;
+          d.bitcount -= 8;
+        }
+        const len = d.source[d.index] | d.source[d.index + 1] << 8;
+        d.index += 4;
+        if (d.index + len > source.length) throw new ZipError("Données compressées corrompues");
+        for (let i = 0; i < len; i++) put(d.source[d.index++]);
+        d.tag = 0;
+        d.bitcount = 0;
+      } else if (type === 1) {
+        inflateBlock(fixedLit, fixedDist);
+      } else if (type === 2) {
+        decodeTrees();
+        inflateBlock(lt, dt);
+      } else {
+        throw new ZipError("Données compressées corrompues");
+      }
+    } while (!final);
+    return d.length === size ? d.dest : d.dest.subarray(0, d.length);
+  }
+  var CRC_TABLE = (() => {
+    const t = new Uint32Array(256);
+    for (let n = 0; n < 256; n++) {
+      let c = n;
+      for (let k = 0; k < 8; k++) c = c & 1 ? 3988292384 ^ c >>> 1 : c >>> 1;
+      t[n] = c >>> 0;
+    }
+    return t;
+  })();
+  function crc32(bytes) {
+    let c = 4294967295;
+    for (let i = 0; i < bytes.length; i++) c = CRC_TABLE[(c ^ bytes[i]) & 255] ^ c >>> 8;
+    return (c ^ 4294967295) >>> 0;
+  }
+  var MAX_UNCOMPRESSED = 100 * 1024 * 1024;
+  var utf8 = new TextDecoder();
+  var encoder = new TextEncoder();
+  function readZip(input) {
+    const buf = input instanceof Uint8Array ? input : new Uint8Array(input);
+    const view = new DataView(buf.buffer, buf.byteOffset, buf.byteLength);
+    const u16 = (o) => view.getUint16(o, true);
+    const u32 = (o) => view.getUint32(o, true);
+    if (buf.length < 22) throw new ZipError("Fichier vide ou trop court");
+    let eocd = -1;
+    for (let i = buf.length - 22; i >= Math.max(0, buf.length - 65557); i--) {
+      if (u32(i) === 101010256) {
+        eocd = i;
+        break;
+      }
+    }
+    if (eocd < 0) throw new ZipError("Le fichier n'est pas une archive ZIP");
+    const entries = /* @__PURE__ */ new Map();
+    let ptr = u32(eocd + 16);
+    let total = 0;
+    for (let n = u16(eocd + 10); n > 0; n--) {
+      if (ptr + 46 > buf.length || u32(ptr) !== 33639248) throw new ZipError("Archive corrompue");
+      const nameLen = u16(ptr + 28);
+      const entry = {
+        method: u16(ptr + 10),
+        compressed: u32(ptr + 20),
+        size: u32(ptr + 24),
+        offset: u32(ptr + 42)
+      };
+      entries.set(utf8.decode(buf.subarray(ptr + 46, ptr + 46 + nameLen)), entry);
+      total += entry.size;
+      ptr += 46 + nameLen + u16(ptr + 30) + u16(ptr + 32);
+    }
+    if (total > MAX_UNCOMPRESSED) throw new ZipError("Archive trop volumineuse");
+    return (name) => {
+      const e = entries.get(name);
+      if (!e) return null;
+      if (e.offset + 30 > buf.length || u32(e.offset) !== 67324752) throw new ZipError("Archive corrompue");
+      const start = e.offset + 30 + u16(e.offset + 26) + u16(e.offset + 28);
+      const data = buf.subarray(start, start + e.compressed);
+      if (e.method === 0) return utf8.decode(data);
+      if (e.method === 8) return utf8.decode(inflateRaw(data, e.size));
+      throw new ZipError("Méthode de compression non prise en charge");
+    };
+  }
+  function writeZip(files) {
+    const parts = [];
+    const central = [];
+    let offset = 0;
+    for (const [name, content] of files) {
+      const data = typeof content === "string" ? encoder.encode(content) : content;
+      const nameBytes = encoder.encode(name);
+      const crc = crc32(data);
+      const header = (size) => {
+        const h = new DataView(new ArrayBuffer(size));
+        return h;
+      };
+      const local = header(30);
+      local.setUint32(0, 67324752, true);
+      local.setUint16(4, 20, true);
+      local.setUint16(6, 2048, true);
+      local.setUint16(8, 0, true);
+      local.setUint16(12, 33, true);
+      local.setUint32(14, crc, true);
+      local.setUint32(18, data.length, true);
+      local.setUint32(22, data.length, true);
+      local.setUint16(26, nameBytes.length, true);
+      const dir = header(46);
+      dir.setUint32(0, 33639248, true);
+      dir.setUint16(4, 20, true);
+      dir.setUint16(6, 20, true);
+      dir.setUint16(8, 2048, true);
+      dir.setUint16(10, 0, true);
+      dir.setUint16(14, 33, true);
+      dir.setUint32(16, crc, true);
+      dir.setUint32(20, data.length, true);
+      dir.setUint32(24, data.length, true);
+      dir.setUint16(28, nameBytes.length, true);
+      dir.setUint32(42, offset, true);
+      parts.push(new Uint8Array(local.buffer), nameBytes, data);
+      central.push(new Uint8Array(dir.buffer), nameBytes);
+      offset += 30 + nameBytes.length + data.length;
+    }
+    const centralSize = central.reduce((a, p) => a + p.length, 0);
+    const end = new DataView(new ArrayBuffer(22));
+    end.setUint32(0, 101010256, true);
+    end.setUint16(8, files.length, true);
+    end.setUint16(10, files.length, true);
+    end.setUint32(12, centralSize, true);
+    end.setUint32(16, offset, true);
+    const all = [...parts, ...central, new Uint8Array(end.buffer)];
+    const out = new Uint8Array(all.reduce((a, p) => a + p.length, 0));
+    let pos = 0;
+    for (const p of all) {
+      out.set(p, pos);
+      pos += p.length;
+    }
+    return out;
+  }
+
+  // src/core/xlsx.js
+  var XlsxError = class extends Error {
+  };
+  function decodeXml(s) {
+    return s.replace(/&(lt|gt|amp|quot|apos|#\d+|#x[0-9a-f]+);/gi, (m, e) => {
+      switch (e.toLowerCase()) {
+        case "lt":
+          return "<";
+        case "gt":
+          return ">";
+        case "amp":
+          return "&";
+        case "quot":
+          return '"';
+        case "apos":
+          return "'";
+        default:
+          return String.fromCodePoint(e[1].toLowerCase() === "x" ? parseInt(e.slice(2), 16) : parseInt(e.slice(1), 10));
+      }
+    }).replace(/_x([0-9A-Fa-f]{4})_/g, (m, h) => String.fromCharCode(parseInt(h, 16)));
+  }
+  function encodeXml(s) {
+    return String(s).replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F￾￿]/g, "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+  }
+  function attrs(tag) {
+    const out = {};
+    for (const m of tag.matchAll(/([\w:]+)\s*=\s*("([^"]*)"|'([^']*)')/g)) out[m[1]] = decodeXml(m[3] ?? m[4]);
+    return out;
+  }
+  function richText(xml) {
+    const cleaned = xml.replace(/<rPh\b[\s\S]*?<\/rPh>/g, "");
+    let text = "";
+    for (const m of cleaned.matchAll(/<t\b[^>]*?(?:\/>|>([\s\S]*?)<\/t>)/g)) text += decodeXml(m[1] ?? "");
+    return text;
+  }
+  function colIndex(ref) {
+    const letters = /^[A-Z]+/i.exec(ref)?.[0].toUpperCase();
+    if (!letters) return -1;
+    let n = 0;
+    for (const ch of letters) n = n * 26 + (ch.charCodeAt(0) - 64);
+    return n - 1;
+  }
+  function colName(index) {
+    let s = "";
+    for (let n = index + 1; n > 0; n = Math.floor((n - 1) / 26)) s = String.fromCharCode(65 + (n - 1) % 26) + s;
+    return s;
+  }
+  function readXlsx(buffer) {
+    let read;
+    let workbook;
+    try {
+      read = readZip(buffer);
+      workbook = read("xl/workbook.xml");
+    } catch (err) {
+      if (err instanceof ZipError) throw new XlsxError("Le fichier n'est pas un classeur Excel (.xlsx) valide");
+      throw err;
+    }
+    if (!workbook) throw new XlsxError("Le fichier n'est pas un classeur Excel (.xlsx) valide");
+    const rels = /* @__PURE__ */ new Map();
+    for (const m of (read("xl/_rels/workbook.xml.rels") ?? "").matchAll(/<Relationship\b[^>]*>/g)) {
+      const a = attrs(m[0]);
+      rels.set(a.Id, a.Target);
+    }
+    const shared = [];
+    for (const m of (read("xl/sharedStrings.xml") ?? "").matchAll(/<si\b[^>]*?(?:\/>|>([\s\S]*?)<\/si>)/g)) {
+      shared.push(richText(m[1] ?? ""));
+    }
+    const date1904 = /<workbookPr\b[^>]*date1904\s*=\s*["'](1|true)["']/.test(workbook);
+    const sheets = [];
+    for (const m of workbook.matchAll(/<sheet\b[^>]*>/g)) {
+      const a = attrs(m[0]);
+      const target = rels.get(a["r:id"]);
+      if (!target) continue;
+      const path = target.startsWith("/") ? target.slice(1) : `xl/${target.replace(/^\.\//, "")}`;
+      const xml = read(path);
+      if (xml === null) continue;
+      sheets.push({ name: a.name, rows: parseSheet(xml, shared) });
+    }
+    return { sheets, date1904 };
+  }
+  function parseSheet(xml, shared) {
+    const rows = [];
+    let nextRow = 0;
+    for (const rm of xml.matchAll(/<row\b([^>]*?)(?:\/>|>([\s\S]*?)<\/row>)/g)) {
+      const r = attrs(rm[1]).r;
+      const rowIndex = r ? Number(r) - 1 : nextRow;
+      nextRow = rowIndex + 1;
+      const row = [];
+      let nextCol = 0;
+      for (const cm of (rm[2] ?? "").matchAll(/<c\b([^>]*?)(?:\/>|>([\s\S]*?)<\/c>)/g)) {
+        const a = attrs(cm[1]);
+        const col = a.r ? colIndex(a.r) : nextCol;
+        nextCol = col + 1;
+        const inner = cm[2] ?? "";
+        const v = /<v\b[^>]*>([\s\S]*?)<\/v>/.exec(inner)?.[1];
+        let value = null;
+        switch (a.t) {
+          case "s":
+            value = v === void 0 ? null : shared[Number(v)] ?? null;
+            break;
+          case "inlineStr":
+            value = richText(/<is\b[^>]*>([\s\S]*?)<\/is>/.exec(inner)?.[1] ?? "");
+            break;
+          case "str":
+            value = v === void 0 ? null : decodeXml(v);
+            break;
+          case "b":
+            value = v === void 0 ? null : v.trim() === "1";
+            break;
+          case "e":
+            value = null;
+            break;
+          case "d":
+            value = v === void 0 ? null : decodeXml(v).slice(0, 10);
+            break;
+          default:
+            value = v === void 0 || v.trim() === "" ? null : Number(v);
+        }
+        if (col >= 0) row[col] = value;
+      }
+      rows[rowIndex] = Array.from(row, (x) => x ?? null);
+    }
+    return Array.from(rows, (x) => x ?? []);
+  }
+  function excelSerialToIso(serial, date1904 = false) {
+    const epoch = date1904 ? Date.UTC(1904, 0, 1) : Date.UTC(1899, 11, 30);
+    return new Date(epoch + Math.floor(serial) * 864e5).toISOString().slice(0, 10);
+  }
+  function isoToExcelSerial(iso) {
+    return (Date.parse(`${iso}T00:00:00Z`) - Date.UTC(1899, 11, 30)) / 864e5;
+  }
+  var STYLES = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">
+<numFmts count="1"><numFmt numFmtId="164" formatCode="dd/mm/yyyy"/></numFmts>
+<fonts count="2"><font><sz val="11"/><name val="Calibri"/></font><font><b/><sz val="11"/><color rgb="FFFFFFFF"/><name val="Calibri"/></font></fonts>
+<fills count="3"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill>
+<fill><patternFill patternType="solid"><fgColor rgb="FF3B5BDB"/><bgColor indexed="64"/></patternFill></fill></fills>
+<borders count="1"><border><left/><right/><top/><bottom/><diagonal/></border></borders>
+<cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs>
+<cellXfs count="5">
+<xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/>
+<xf numFmtId="164" fontId="0" fillId="0" borderId="0" xfId="0" applyNumberFormat="1"/>
+<xf numFmtId="0" fontId="1" fillId="2" borderId="0" xfId="0" applyFont="1" applyFill="1"/>
+<xf numFmtId="4" fontId="0" fillId="0" borderId="0" xfId="0" applyNumberFormat="1"/>
+<xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0" applyAlignment="1"><alignment wrapText="1" vertical="top"/></xf>
+</cellXfs>
+<cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles>
+</styleSheet>`;
+  var STYLE = { date: 1, header: 2, money: 3, wrap: 4 };
+  function cellXml(ref, value, type) {
+    if (value === null || value === void 0 || value === "") return "";
+    if (type === "date" && typeof value === "string" && /^\d{4}-\d{2}-\d{2}$/.test(value)) {
+      return `<c r="${ref}" s="${STYLE.date}"><v>${isoToExcelSerial(value)}</v></c>`;
+    }
+    if (typeof value === "number" && Number.isFinite(value)) {
+      return `<c r="${ref}"${type === "money" ? ` s="${STYLE.money}"` : ""}><v>${value}</v></c>`;
+    }
+    if (typeof value === "boolean") return `<c r="${ref}" t="b"><v>${value ? 1 : 0}</v></c>`;
+    const style = type === "wrap" ? ` s="${STYLE.wrap}"` : "";
+    return `<c r="${ref}" t="inlineStr"${style}><is><t xml:space="preserve">${encodeXml(value)}</t></is></c>`;
+  }
+  function filterRef({ columns, rows, autoFilter = true }) {
+    if (!autoFilter || !rows.length) return null;
+    return `A1:${colName(Math.max(columns.length - 1, 0))}${rows.length + 1}`;
+  }
+  var absRef = (ref) => ref.replace(/([A-Z]+)(\d+)/g, "$$$1$$$2");
+  function sheetXml({ columns, rows, autoFilter }) {
+    const header = `<row r="1">${columns.map((c, i) => `<c r="${colName(i)}1" t="inlineStr" s="${STYLE.header}"><is><t>${encodeXml(c.header)}</t></is></c>`).join("")}</row>`;
+    const body = rows.map((row, r) => `<row r="${r + 2}">${columns.map((c, i) => cellXml(`${colName(i)}${r + 2}`, row[i], c.type)).join("")}</row>`).join("");
+    return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">
+<sheetViews><sheetView workbookViewId="0"><pane ySplit="1" topLeftCell="A2" activePane="bottomLeft" state="frozen"/></sheetView></sheetViews>
+<cols>${columns.map((c, i) => `<col min="${i + 1}" max="${i + 1}" width="${c.width ?? 16}" customWidth="1"/>`).join("")}</cols>
+<sheetData>${header}${body}</sheetData>
+${filterRef({ columns, rows, autoFilter }) ? `<autoFilter ref="${filterRef({ columns, rows, autoFilter })}"/>` : ""}
+</worksheet>`;
+  }
+  function definedNames(sheets) {
+    const names = sheets.map((s, i) => {
+      const ref = filterRef(s);
+      if (!ref) return "";
+      const quoted = `'${s.name.replace(/'/g, "''")}'`;
+      return `<definedName name="_xlnm._FilterDatabase" localSheetId="${i}" hidden="1">${encodeXml(`${quoted}!${absRef(ref)}`)}</definedName>`;
+    }).join("");
+    return names ? `<definedNames>${names}</definedNames>` : "";
+  }
+  function writeXlsx(sheets) {
+    const files = [
+      ["[Content_Types].xml", `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+<Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
+<Default Extension="xml" ContentType="application/xml"/>
+<Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/>
+<Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/>
+${sheets.map((s, i) => `<Override PartName="/xl/worksheets/sheet${i + 1}.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>`).join("\n")}
+</Types>`],
+      ["_rels/.rels", `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/>
+</Relationships>`],
+      ["xl/workbook.xml", `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
+<sheets>${sheets.map((s, i) => `<sheet name="${encodeXml(s.name)}" sheetId="${i + 1}" r:id="rId${i + 1}"/>`).join("")}</sheets>
+${definedNames(sheets)}
+</workbook>`],
+      ["xl/_rels/workbook.xml.rels", `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+${sheets.map((s, i) => `<Relationship Id="rId${i + 1}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet${i + 1}.xml"/>`).join("\n")}
+<Relationship Id="rId${sheets.length + 1}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/>
+</Relationships>`],
+      ["xl/styles.xml", STYLES],
+      ...sheets.map((s, i) => [`xl/worksheets/sheet${i + 1}.xml`, sheetXml(s)])
+    ];
+    return writeZip(files);
+  }
+
+  // src/core/datasheets.js
+  var MAX_ERRORS = 200;
+  var norm = (s) => String(s ?? "").replace(/\(.*?\)/g, "").normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().replace(/[^a-z0-9]/g, "");
+  var project = { key: "project", header: "Projet", lookup: "projects", field: "project_id", required: true, aliases: ["nomduprojet", "projectid"], width: 28 };
+  var id = { key: "id", header: "ID", type: "id", width: 7 };
+  var SHEETS = [
+    {
+      resource: "contributors",
+      name: "Contributeurs",
+      aliases: ["contributeur", "contributors", "equipe", "ressources", "personnes"],
+      naturalKey: (r) => norm(r.name),
+      columns: [
+        id,
+        { key: "name", header: "Nom", aliases: ["nomcomplet", "contributeur", "name"], width: 24 },
+        { key: "role", header: "Rôle", aliases: ["fonction", "poste", "role"], width: 24 },
+        { key: "email", header: "E-mail", aliases: ["email", "mail", "courriel"], width: 30 },
+        { key: "daily_rate", header: "Taux journalier (€)", aliases: ["tjm", "taux", "dailyrate"], type: "money", width: 18 }
+      ]
+    },
+    {
+      resource: "projects",
+      name: "Projets",
+      aliases: ["projet", "projects"],
+      naturalKey: (r) => norm(r.name),
+      columns: [
+        id,
+        { key: "name", header: "Nom", aliases: ["projet", "nomduprojet", "name"], width: 30 },
+        { key: "description", header: "Description", type: "wrap", width: 40 },
+        { key: "status", header: "Statut", labels: "projectStatus", aliases: ["etat", "status"], width: 14 },
+        { key: "start_date", header: "Date de début", aliases: ["debut", "startdate"], width: 14 },
+        { key: "end_date", header: "Date de fin", aliases: ["fin", "datedefinprevue", "enddate"], width: 14 },
+        { key: "budget", header: "Budget global (€)", aliases: ["budget", "enveloppe", "budgettotal"], type: "money", width: 16 }
+      ]
+    },
+    {
+      resource: "budget_lines",
+      name: "Postes budgétaires",
+      aliases: ["postes", "poste", "postesbudgetaires", "budget", "budgetlines", "lignesbudgetaires"],
+      naturalKey: (r) => `${r.project_id}|${norm(r.name)}`,
+      columns: [
+        id,
+        project,
+        { key: "name", header: "Poste", aliases: ["postebudgetaire", "nom", "ligne", "name"], width: 30 },
+        { key: "category", header: "Nature", labels: "category", aliases: ["categorie", "type", "category"], width: 26 },
+        { key: "amount", header: "Budget prévu (€)", aliases: ["budget", "montant", "prevu", "budgetalloue", "amount"], type: "money", width: 16 },
+        { key: "notes", header: "Commentaire", aliases: ["notes", "remarque"], type: "wrap", width: 40 }
+      ]
+    },
+    {
+      resource: "tasks",
+      name: "Tâches",
+      aliases: ["tache", "tasks", "task"],
+      naturalKey: (r) => `${r.project_id}|${norm(r.title)}`,
+      columns: [
+        id,
+        project,
+        { key: "title", header: "Titre", aliases: ["tache", "nom", "intitule", "title"], width: 34 },
+        { key: "description", header: "Description", type: "wrap", width: 40 },
+        { key: "status", header: "Statut", labels: "taskStatus", aliases: ["etat", "status"], width: 12 },
+        { key: "priority", header: "Priorité", labels: "priority", aliases: ["priority"], width: 11 },
+        { key: "assignee", header: "Responsable", lookup: "contributors", field: "assignee_id", aliases: ["assigne", "assignee", "contributeur"], width: 22 },
+        { key: "start_date", header: "Début", aliases: ["datededebut", "startdate"], width: 12 },
+        { key: "due_date", header: "Échéance", aliases: ["datedecheance", "datelimite", "duedate", "fin"], width: 12 },
+        { key: "estimated_hours", header: "Charge (h)", aliases: ["heures", "chargeestimee", "estimatedhours"], width: 11 }
+      ]
+    },
+    {
+      resource: "milestones",
+      name: "Jalons",
+      aliases: ["jalon", "milestones", "milestone"],
+      naturalKey: (r) => `${r.project_id}|${norm(r.name)}`,
+      columns: [
+        id,
+        project,
+        { key: "name", header: "Nom", aliases: ["jalon", "name"], width: 30 },
+        { key: "due_date", header: "Date", aliases: ["echeance", "duedate"], width: 12 },
+        { key: "done", header: "Atteint", aliases: ["fait", "termine", "done"], width: 9 },
+        { key: "description", header: "Description", type: "wrap", width: 40 }
+      ]
+    },
+    {
+      resource: "expenses",
+      name: "Engagements",
+      aliases: ["depense", "depenses", "engagement", "engagementsdepenses", "expenses", "couts", "commandes"],
+      naturalKey: (r) => `${r.project_id}|${norm(r.label)}|${r.date}|${Number(r.amount_committed)}`,
+      columns: [
+        id,
+        project,
+        { key: "budget_line", header: "Poste", lookup: "budget_lines", field: "budget_line_id", aliases: ["postebudgetaire", "ligne"], width: 26 },
+        { key: "label", header: "Libellé", aliases: ["depense", "intitule", "description", "objet", "label"], width: 32 },
+        { key: "supplier", header: "Fournisseur", aliases: ["prestataire", "supplier", "tiers"], width: 22 },
+        { key: "reference", header: "Référence", aliases: ["ref", "numerodecommande", "bondecommande", "facture", "reference"], width: 16 },
+        { key: "date", header: "Date", width: 12 },
+        { key: "amount_committed", header: "Montant engagé (€)", aliases: ["engage", "montant", "cout", "amount", "montantcommande"], type: "money", width: 18 },
+        { key: "amount_invoiced", header: "Montant réalisé (€)", aliases: ["realise", "facture", "paye", "montantfacture", "montantpaye"], type: "money", width: 18 },
+        { key: "contributor", header: "Contributeur", lookup: "contributors", field: "contributor_id", aliases: ["responsable"], width: 22 },
+        { key: "task", header: "Tâche", lookup: "tasks", field: "task_id", aliases: ["tacheliee", "task"], width: 30 }
+      ]
+    }
+  ];
+  var fieldOf = (spec, col) => resources[spec.resource].fields[col.field ?? col.key];
+  var columnType = (spec, col) => col.type ?? (fieldOf(spec, col)?.type === "date" ? "date" : void 0);
+  function exportWorkbook(store2, { template = false } = {}) {
+    const names = {
+      projects: new Map(store2.list(resources.projects).map((r) => [r.id, r.name])),
+      contributors: new Map(store2.list(resources.contributors).map((r) => [r.id, r.name])),
+      tasks: new Map(store2.list(resources.tasks).map((r) => [r.id, r.title])),
+      budget_lines: new Map(store2.list(resources.budget_lines).map((r) => [r.id, r.name]))
+    };
+    const sheets = SHEETS.map((spec) => {
+      const records = template ? [] : store2.list(resources[spec.resource]);
+      return {
+        name: spec.name,
+        columns: spec.columns.map((c) => ({ header: c.header, type: columnType(spec, c), width: c.width })),
+        rows: records.map((r) => spec.columns.map((c) => {
+          if (c.lookup) return names[c.lookup].get(r[c.field]) ?? null;
+          const v = r[c.key];
+          if (c.labels) return LABELS[c.labels][v] ?? v;
+          if (c.key === "done") return v ? "Oui" : "Non";
+          return v;
+        }))
+      };
+    });
+    sheets.push(helpSheet());
+    return writeXlsx(sheets);
+  }
+  function helpSheet() {
+    const rows = [
+      ["Mode d'emploi", "", "", ""],
+      ["• Une ligne = un élément. La première ligne de chaque onglet contient les en-têtes.", "", "", ""],
+      ["• Les liens se font par le nom : colonne « Projet » = nom exact du projet, « Poste » = nom du poste budgétaire du projet, « Responsable » = nom du contributeur.", "", "", ""],
+      ["• Engagements : le montant engagé est le montant commandé / signé ; le montant réalisé est la part déjà facturée ou payée (≤ engagé).", "", "", ""],
+      ["• Si la colonne « Montant réalisé » est absente, chaque ligne est considérée comme entièrement réalisée (dépense payée).", "", "", ""],
+      ["• Colonne ID : laissez-la vide pour créer un élément ; conservez-la pour mettre à jour un élément existant.", "", "", ""],
+      ["• Import en mode « fusion » : une cellule vide ne modifie pas la valeur existante.", "", "", ""],
+      ["• Dates au format JJ/MM/AAAA (ou cellules au format date Excel). Montants en euros.", "", "", ""],
+      ["• Les onglets sont importés dans l'ordre : Contributeurs, Projets, Postes budgétaires, Tâches, Jalons, Engagements.", "", "", ""],
+      ["", "", "", ""],
+      ["Onglet", "Colonne", "Obligatoire", "Valeurs possibles / format"]
+    ];
+    for (const spec of SHEETS) {
+      for (const c of spec.columns) {
+        const f = fieldOf(spec, c);
+        let format = "";
+        if (c.key === "id") format = "Nombre entier (rempli automatiquement à l'export)";
+        else if (c.labels) format = Object.values(LABELS[c.labels]).join(", ");
+        else if (c.lookup) format = `Nom d'un élément de l'onglet « ${SHEETS.find((s) => s.resource === c.lookup).name} »`;
+        else if (c.key === "done") format = "Oui / Non";
+        else if (f?.type === "date") format = "Date (JJ/MM/AAAA)";
+        else if (f?.type === "number") format = "Nombre ≥ 0";
+        else if (f?.format === "email") format = "Adresse e-mail";
+        else format = "Texte";
+        rows.push([spec.name, c.header, c.required || f?.required ? "Oui" : "", format]);
+      }
+    }
+    return {
+      name: "Mode d'emploi",
+      autoFilter: false,
+      columns: [{ header: "Pilotage de projets", width: 16 }, { header: "", width: 22 }, { header: "", width: 12 }, { header: "", width: 70 }],
+      rows
+    };
+  }
+  function toIsoDate(raw, date1904) {
+    if (typeof raw === "number") return excelSerialToIso(raw, date1904);
+    if (typeof raw !== "string") return raw;
+    const s = raw.trim();
+    let m = /^(\d{4})-(\d{1,2})-(\d{1,2})(?:[T ].*)?$/.exec(s);
+    if (m) return `${m[1]}-${m[2].padStart(2, "0")}-${m[3].padStart(2, "0")}`;
+    m = /^(\d{1,2})[/.-](\d{1,2})[/.-](\d{2}|\d{4})$/.exec(s);
+    if (m) {
+      const year = m[3].length === 2 ? `20${m[3]}` : m[3];
+      return `${year}-${m[2].padStart(2, "0")}-${m[1].padStart(2, "0")}`;
+    }
+    return s;
+  }
+  var TRUE_WORDS = /* @__PURE__ */ new Set(["oui", "o", "x", "vrai", "yes", "y", "true", "1", "atteint", "fait", "termine"]);
+  var FALSE_WORDS = /* @__PURE__ */ new Set(["non", "n", "faux", "no", "false", "0"]);
+  var CellError = class extends Error {
+    constructor(column, message) {
+      super(message);
+      this.column = column;
+    }
+  };
+  function matchColumns(spec, headerRow) {
+    const mapping = [];
+    const used = /* @__PURE__ */ new Set();
+    const unknown = [];
+    headerRow.forEach((h, index) => {
+      if (h === null || String(h).trim() === "") return;
+      const n = norm(h);
+      const col = spec.columns.find((c) => !used.has(c.key) && (norm(c.header) === n || norm(c.key) === n || (c.aliases ?? []).includes(n)));
+      if (col) {
+        used.add(col.key);
+        mapping.push({ index, col });
+      } else {
+        unknown.push(String(h));
+      }
+    });
+    return { mapping, unknown };
+  }
+  function importWorkbook(store2, buffer, { mode = "merge", dryRun = false } = {}) {
+    if (!["merge", "replace"].includes(mode)) throw new AppError("Mode d'import inconnu");
+    let book;
+    try {
+      book = readXlsx(buffer);
+    } catch (err) {
+      if (err instanceof XlsxError || err instanceof ZipError) throw new AppError("Le fichier n'est pas un classeur Excel (.xlsx) valide ou il est endommagé");
+      throw err;
+    }
+    const found = SHEETS.map((spec) => ({
+      spec,
+      sheet: book.sheets.find((s) => norm(s.name) === norm(spec.name) || spec.aliases.includes(norm(s.name)))
+    }));
+    if (!found.some((f) => f.sheet)) {
+      throw new AppError(`Aucun onglet reconnu dans le fichier. Onglets attendus : ${SHEETS.map((s) => s.name).join(", ")}.`);
+    }
+    const storert = { mode, dryRun, saved: false, sheets: [], errors: [], warnings: [] };
+    const addError = (e) => {
+      if (storert.errors.length < MAX_ERRORS) storert.errors.push(e);
+    };
+    store2.transaction(() => {
+      if (mode === "replace") store2.wipe();
+      for (const { spec, sheet } of found) {
+        if (!sheet) {
+          if (mode === "replace") storert.warnings.push(`Onglet « ${spec.name} » absent du fichier : cette table sera vide.`);
+          continue;
+        }
+        storert.sheets.push(importSheet(store2, spec, sheet, book.date1904, mode, addError, storert.warnings));
+      }
+    }, { rollback: () => dryRun || storert.errors.length > 0 });
+    storert.saved = !dryRun && storert.errors.length === 0;
+    return storert;
+  }
+  function lookupTables(store2) {
+    const byName = (rows, key) => {
+      const map = /* @__PURE__ */ new Map();
+      for (const r of rows) if (!map.has(norm(r[key]))) map.set(norm(r[key]), r.id);
+      return map;
+    };
+    const tasks = store2.list(resources.tasks);
+    return {
+      projects: byName(store2.list(resources.projects), "name"),
+      contributors: byName(store2.list(resources.contributors), "name"),
+      tasks: new Map(tasks.map((t) => [`${t.project_id}|${norm(t.title)}`, t.id]).reverse()),
+      budget_lines: new Map(store2.list(resources.budget_lines).map((l) => [`${l.project_id}|${norm(l.name)}`, l.id]).reverse()),
+      projectIds: new Set(store2.list(resources.projects).map((p) => p.id))
+    };
+  }
+  function importSheet(store2, spec, sheet, date1904, mode, addError, warnings) {
+    const def = resources[spec.resource];
+    const result = { sheet: sheet.name, resource: spec.resource, label: spec.name, created: 0, updated: 0, rows: 0 };
+    const headerIndex = sheet.rows.findIndex((r) => r.some((v) => v !== null && String(v).trim() !== ""));
+    if (headerIndex < 0) return result;
+    const { mapping, unknown } = matchColumns(spec, sheet.rows[headerIndex]);
+    if (unknown.length) warnings.push(`Onglet « ${sheet.name} » : colonne(s) ignorée(s) : ${unknown.join(", ")}.`);
+    const missing = spec.columns.filter((c) => (c.required || def.fields[c.key]?.required) && !mapping.some((m) => m.col.key === c.key));
+    if (missing.length) {
+      addError({ sheet: sheet.name, row: headerIndex + 1, message: `Colonne(s) obligatoire(s) manquante(s) : ${missing.map((c) => c.header).join(", ")}` });
+      return result;
+    }
+    const lookups = lookupTables(store2);
+    const hasInvoicedColumn = mapping.some((m) => m.col.key === "amount_invoiced");
+    const seen = /* @__PURE__ */ new Map();
+    if (spec.naturalKey && mode === "merge") {
+      for (const r of store2.list(def)) {
+        const k = spec.naturalKey(r);
+        if (!seen.has(k)) seen.set(k, r.id);
+      }
+    }
+    for (let i = headerIndex + 1; i < sheet.rows.length; i++) {
+      const cells = sheet.rows[i];
+      if (!cells.some((v) => v !== null && String(v).trim() !== "")) continue;
+      result.rows++;
+      const rowNumber = i + 1;
+      try {
+        const { body, rowId } = convertRow(spec, mapping, cells, lookups, date1904);
+        let targetId = rowId && store2.findById(def, rowId) ? rowId : null;
+        if (!targetId && spec.naturalKey) {
+          const probe = validate(def, body, { partial: true }).data ?? body;
+          targetId = seen.get(spec.naturalKey(probe)) ?? null;
+        }
+        let saved;
+        if (targetId) {
+          const changes = Object.fromEntries(Object.entries(body).filter(([, v]) => v !== null));
+          saved = store2.update(def, targetId, changes);
+          result.updated++;
+        } else {
+          if (spec.resource === "expenses" && !hasInvoicedColumn && body.amount_invoiced === void 0) {
+            body.amount_invoiced = body.amount_committed;
+          }
+          saved = store2.create(def, body, { id: rowId ?? void 0 });
+          result.created++;
+        }
+        if (spec.naturalKey) seen.set(spec.naturalKey(saved), saved.id);
+        if (spec.resource === "tasks") lookups.tasks.set(`${saved.project_id}|${norm(saved.title)}`, saved.id);
+        if (spec.resource === "budget_lines") lookups.budget_lines.set(`${saved.project_id}|${norm(saved.name)}`, saved.id);
+      } catch (err) {
+        if (err instanceof CellError) {
+          addError({ sheet: sheet.name, row: rowNumber, column: err.column, message: err.message });
+        } else if (err instanceof AppError) {
+          const details = Object.entries(err.details ?? {});
+          if (!details.length) addError({ sheet: sheet.name, row: rowNumber, message: err.message });
+          for (const [field, message] of details) {
+            const col = spec.columns.find((c) => (c.field ?? c.key) === field);
+            addError({ sheet: sheet.name, row: rowNumber, column: col?.header ?? field, message });
+          }
+        } else {
+          throw err;
+        }
+      }
+    }
+    return result;
+  }
+  function convertRow(spec, mapping, cells, lookups, date1904) {
+    const body = {};
+    let rowId = null;
+    const def = resources[spec.resource];
+    const ordered = [...mapping].sort((a, b) => a.col.key === "project" ? -1 : b.col.key === "project" ? 1 : 0);
+    for (const { index, col } of ordered) {
+      let raw = cells[index] ?? null;
+      if (typeof raw === "string") raw = raw.trim();
+      const empty2 = raw === null || raw === "";
+      if (col.key === "id") {
+        if (empty2) continue;
+        const n = Number(raw);
+        if (!Number.isInteger(n) || n <= 0) throw new CellError(col.header, `ID invalide : « ${raw} »`);
+        rowId = n;
+        continue;
+      }
+      if (col.lookup) {
+        if (empty2) {
+          body[col.field] = null;
+          continue;
+        }
+        body[col.field] = resolveLookup(col, raw, body, lookups);
+        continue;
+      }
+      const field = def.fields[col.key];
+      if (empty2) {
+        body[col.key] = null;
+        continue;
+      }
+      if (col.labels) {
+        const n = norm(raw);
+        const entry = Object.entries(LABELS[col.labels]).find(([code, label]) => norm(label) === n || norm(code) === n);
+        if (!entry) {
+          throw new CellError(col.header, `Valeur « ${raw} » non reconnue (valeurs possibles : ${Object.values(LABELS[col.labels]).join(", ")})`);
+        }
+        body[col.key] = entry[0];
+      } else if (field.type === "boolean") {
+        if (typeof raw === "boolean" || typeof raw === "number") body[col.key] = Boolean(raw);
+        else if (TRUE_WORDS.has(norm(raw))) body[col.key] = true;
+        else if (FALSE_WORDS.has(norm(raw))) body[col.key] = false;
+        else throw new CellError(col.header, `Valeur « ${raw} » non reconnue (Oui ou Non attendu)`);
+      } else if (field.type === "date") {
+        body[col.key] = toIsoDate(raw, date1904);
+      } else if (field.type === "text") {
+        body[col.key] = typeof raw === "boolean" ? raw ? "Oui" : "Non" : String(raw);
+      } else {
+        body[col.key] = raw;
+      }
+    }
+    return { body, rowId };
+  }
+  function resolveLookup(col, raw, body, lookups) {
+    const n = norm(raw);
+    let found;
+    if (col.lookup === "tasks" || col.lookup === "budget_lines") {
+      found = lookups[col.lookup].get(`${body.project_id}|${n}`);
+      if (!found) {
+        const what = col.lookup === "tasks" ? "Tâche" : "Poste";
+        throw new CellError(col.header, `${what} « ${raw} » introuvable dans ce projet${col.lookup === "budget_lines" ? " (vérifiez l'onglet Postes budgétaires)" : ""}`);
+      }
+      return found;
+    }
+    found = lookups[col.lookup].get(n);
+    if (!found && col.lookup === "projects" && Number.isInteger(raw) && lookups.projectIds.has(raw)) found = raw;
+    if (!found) {
+      const what = col.lookup === "projects" ? "Projet" : "Contributeur";
+      throw new CellError(col.header, `${what} « ${raw} » introuvable (vérifiez l'onglet ${col.lookup === "projects" ? "Projets" : "Contributeurs"})`);
+    }
+    return found;
+  }
+
+  // src/core/demo.js
+  function insertDemoData(store2, today2) {
+    const day = (offset) => addDays(today2, offset);
+    const add = (table, row) => store2.create(resources[table], row).id;
+    return store2.transaction(() => {
+      const alice = add("contributors", { name: "Alice Martin", email: "alice.martin@example.com", role: "Développeuse front-end", daily_rate: 550 });
+      const karim = add("contributors", { name: "Karim Benali", email: "karim.benali@example.com", role: "Développeur back-end", daily_rate: 600 });
+      const sophie = add("contributors", { name: "Sophie Dubois", email: "sophie.dubois@example.com", role: "Designer UX/UI", daily_rate: 500 });
+      const lucas = add("contributors", { name: "Lucas Petit", email: "lucas.petit@example.com", role: "Testeur QA", daily_rate: 420 });
+      const crm = add("projects", {
+        name: "Migration du CRM",
+        description: "Migration des données clients vers le nouveau CRM.",
+        status: "planned",
+        start_date: day(30),
+        end_date: day(120),
+        budget: 25e3
+      });
+      const appli = add("projects", {
+        name: "Application mobile de fidélité",
+        description: "Application iOS/Android pour le programme de points clients.",
+        status: "active",
+        start_date: day(-20),
+        end_date: day(75),
+        budget: 45e3
+      });
+      const site = add("projects", {
+        name: "Refonte du site e-commerce",
+        description: "Nouvelle boutique en ligne responsive avec tunnel de commande simplifié.",
+        status: "active",
+        start_date: day(-45),
+        end_date: day(40),
+        budget: 6e4
+      });
+      const line = (project_id, name, category, amount, notes = null) => add("budget_lines", { project_id, name, category, amount, notes });
+      const siteTeam = line(site, "Équipe projet interne", "personnel", 22e3);
+      const siteDev = line(site, "Développement (prestataire)", "prestation", 24e3, "Contrat cadre WebAgency");
+      const siteSoft = line(site, "Licences & outils", "logiciel", 3e3);
+      const siteHost = line(site, "Hébergement cloud", "infrastructure", 6e3);
+      line(site, "Provision pour risques", "provision", 5e3);
+      const appTeam = line(appli, "Équipe projet interne", "personnel", 18e3);
+      const appDev = line(appli, "Développement mobile (prestataire)", "prestation", 2e4);
+      const appHw = line(appli, "Matériel de test", "materiel", 2500);
+      const appStore = line(appli, "Comptes stores & licences", "logiciel", 1500);
+      line(crm, "Éditeur CRM (licences 1re année)", "logiciel", 12e3);
+      line(crm, "Reprise de données (prestataire)", "prestation", 9e3);
+      line(crm, "Formation des utilisateurs", "formation", 4e3);
+      const task = (project_id, title, status, priority, assignee_id, start_date, due_date, estimated_hours) => add("tasks", { project_id, title, status, priority, assignee_id, start_date, due_date, estimated_hours });
+      const cadrage = task(site, "Ateliers de cadrage", "done", "high", sophie, day(-45), day(-38), 16);
+      const maquettes = task(site, "Maquettes des pages clés", "done", "high", sophie, day(-38), day(-20), 40);
+      const catalogue = task(site, "Intégration du catalogue produits", "in_progress", "high", alice, day(-15), day(5), 48);
+      const paiement = task(site, "API de paiement", "in_progress", "high", karim, day(-10), day(-2), 32);
+      task(site, "Tunnel de commande", "todo", "medium", alice, day(3), day(18), 40);
+      task(site, "Campagne de tests de recette", "todo", "medium", lucas, day(20), day(32), 32);
+      task(site, "Mise en production", "todo", "high", karim, day(36), day(40), 8);
+      const wireframes = task(appli, "Parcours utilisateur et wireframes", "done", "medium", sophie, day(-20), day(-8), 24);
+      task(appli, "Back-end des points de fidélité", "in_progress", "high", karim, day(-5), day(12), 56);
+      task(appli, "Écrans de connexion", "todo", "medium", alice, day(2), day(9), 20);
+      task(appli, "Notifications push", "todo", "low", null, null, day(30), 16);
+      const milestone = (project_id, name, due_date, done) => add("milestones", { project_id, name, due_date, done });
+      milestone(site, "Validation des maquettes", day(-20), true);
+      milestone(site, "Recette fonctionnelle", day(32), false);
+      milestone(site, "Mise en ligne", day(40), false);
+      milestone(appli, "Démo au comité de pilotage", day(-3), false);
+      milestone(appli, "Publication sur les stores", day(75), false);
+      const spend = (project_id, budget_line_id, label, supplier, reference, date, amount_committed, amount_invoiced, extra = {}) => add("expenses", { project_id, budget_line_id, label, supplier, reference, date, amount_committed, amount_invoiced, ...extra });
+      spend(site, siteTeam, "Ateliers de cadrage", null, null, day(-38), 1e3, 1e3, { task_id: cadrage, contributor_id: sophie });
+      spend(site, siteTeam, "Maquettes", null, null, day(-20), 2500, 2500, { task_id: maquettes, contributor_id: sophie });
+      spend(site, siteTeam, "Développement catalogue (sprint 1)", null, null, day(-5), 13200, 13200, { task_id: catalogue, contributor_id: alice });
+      spend(site, siteDev, "Bon de commande API de paiement", "WebAgency", "BC-2026-041", day(-12), 18e3, 9e3, { task_id: paiement });
+      spend(site, siteDev, "Bon de commande tunnel de commande", "WebAgency", "BC-2026-052", day(-2), 8500, 0);
+      spend(site, siteSoft, "Licence thème premium", "ThemeShop", "FA-88412", day(-30), 890, 890);
+      spend(site, siteHost, "Hébergement cloud (abonnement annuel)", "CloudNet", "BC-2026-038", day(-15), 5800, 1450);
+      spend(appli, appTeam, "Wireframes", null, null, day(-8), 1500, 1500, { task_id: wireframes, contributor_id: sophie });
+      spend(appli, appDev, "Développement mobile — lot 1", "AppFactory", "BC-2026-047", day(-6), 12e3, 4e3);
+      spend(appli, appStore, "Comptes développeur Apple & Google", "Apple / Google", null, day(-18), 125, 125);
+      spend(appli, appHw, "Téléphones de test", "Boulanger Pro", "FA-20931", day(-12), 1340, 1340, { contributor_id: lucas });
+    });
+  }
+
+  // src/ui/state.js
+  var KEY = "pilotage-projets/donnees";
+  var XLSX_TYPE = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
+  var store = createStore();
+  var saveState = {
+    browserStorage: true,
+    // false si le navigateur refuse le stockage local (navigation privée, stratégie d'entreprise)
+    unsavedChanges: false,
+    // modifications non encore enregistrées dans un fichier
+    lastFileSave: null,
+    fileName: null
+  };
+  var fileHandle = null;
+  var applyingRemote = false;
+  var listeners = /* @__PURE__ */ new Set();
+  var notify = () => listeners.forEach((fn) => fn(saveState));
+  var onSaveStateChange = (fn) => listeners.add(fn);
+  function readLocal() {
+    try {
+      const raw = localStorage.getItem(KEY);
+      return raw ? JSON.parse(raw) : null;
+    } catch {
+      saveState.browserStorage = false;
+      return null;
+    }
+  }
+  function writeLocal() {
+    try {
+      localStorage.setItem(KEY, JSON.stringify({
+        version: DATA_VERSION,
+        data: store.toJSON(),
+        meta: { unsavedChanges: saveState.unsavedChanges, lastFileSave: saveState.lastFileSave, fileName: saveState.fileName }
+      }));
+      saveState.browserStorage = true;
+    } catch {
+      saveState.browserStorage = false;
+    }
+  }
+  function initPersistence() {
+    const saved = readLocal();
+    if (saved?.data) {
+      store.load(saved.data);
+      Object.assign(saveState, {
+        unsavedChanges: Boolean(saved.meta?.unsavedChanges),
+        lastFileSave: saved.meta?.lastFileSave ?? null,
+        fileName: saved.meta?.fileName ?? null
+      });
+    }
+    store.subscribe(() => {
+      if (applyingRemote) return;
+      saveState.unsavedChanges = true;
+      writeLocal();
+      notify();
+    });
+    window.addEventListener("storage", (e) => {
+      if (e.key !== KEY || !e.newValue) return;
+      try {
+        const next = JSON.parse(e.newValue);
+        applyingRemote = true;
+        store.load(next.data);
+        Object.assign(saveState, next.meta ?? {});
+      } catch {
+      } finally {
+        applyingRemote = false;
+      }
+      notify();
+      window.dispatchEvent(new CustomEvent("data-reloaded"));
+    });
+    window.addEventListener("beforeunload", (e) => {
+      if (!saveState.unsavedChanges || store.counts().projects === 0) return;
+      e.preventDefault();
+      e.returnValue = "";
+    });
+    writeLocal();
+    notify();
+  }
+  function downloadBytes(bytes, name, type = XLSX_TYPE) {
+    const url = URL.createObjectURL(new Blob([bytes], { type }));
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = name;
+    document.body.append(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1e4);
+  }
+  var localDate = () => (/* @__PURE__ */ new Date()).toLocaleDateString("sv-SE");
+  var defaultName = () => `pilotage-projets-${localDate()}.xlsx`;
+  var pickerTypes = [{ description: "Classeur Excel", accept: { [XLSX_TYPE]: [".xlsx"] } }];
+  function markSaved(name) {
+    Object.assign(saveState, { unsavedChanges: false, lastFileSave: (/* @__PURE__ */ new Date()).toISOString(), fileName: name });
+    writeLocal();
+    notify();
+  }
+  async function saveToFile({ saveAs = false } = {}) {
+    const bytes = exportWorkbook(store);
+    if (window.showSaveFilePicker && (saveAs || !fileHandle)) {
+      try {
+        fileHandle = await window.showSaveFilePicker({ suggestedName: saveState.fileName || defaultName(), types: pickerTypes });
+      } catch (err) {
+        if (err?.name === "AbortError") return null;
+        fileHandle = null;
+      }
+    }
+    if (fileHandle) {
+      try {
+        const writable = await fileHandle.createWritable();
+        await writable.write(bytes);
+        await writable.close();
+        markSaved(fileHandle.name);
+        return fileHandle.name;
+      } catch {
+        fileHandle = null;
+      }
+    }
+    const name = defaultName();
+    downloadBytes(bytes, name);
+    markSaved(name);
+    return name;
+  }
+  async function pickFile() {
+    if (window.showOpenFilePicker) {
+      try {
+        const [handle] = await window.showOpenFilePicker({ types: pickerTypes, multiple: false });
+        const file = await handle.getFile();
+        return { name: file.name, bytes: new Uint8Array(await file.arrayBuffer()), handle };
+      } catch (err) {
+        if (err?.name === "AbortError") return null;
+      }
+    }
+    return new Promise((resolve) => {
+      const input = document.createElement("input");
+      input.type = "file";
+      input.accept = ".xlsx";
+      input.addEventListener("change", async () => {
+        const file = input.files[0];
+        resolve(file ? { name: file.name, bytes: new Uint8Array(await file.arrayBuffer()), handle: null } : null);
+      });
+      input.addEventListener("cancel", () => resolve(null));
+      input.click();
+    });
+  }
+  function openDataFile({ name, bytes, handle }) {
+    const report = importWorkbook(store, bytes, { mode: "replace" });
+    if (report.saved) {
+      fileHandle = handle ?? null;
+      markSaved(name);
+    }
+    return report;
+  }
+
+  // src/ui/ui.js
+  var options = (labels) => Object.entries(labels);
+  var ESCAPES = { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" };
+  var esc = (value) => String(value ?? "").replace(/[&<>"']/g, (c) => ESCAPES[c]);
+  var moneyFmt = new Intl.NumberFormat("fr-FR", { style: "currency", currency: "EUR", maximumFractionDigits: 0 });
+  var money = (n) => moneyFmt.format(n || 0);
+  var numberFmt = new Intl.NumberFormat("fr-FR", { maximumFractionDigits: 1 });
+  var num = (n) => numberFmt.format(n || 0);
+  var today = () => (/* @__PURE__ */ new Date()).toLocaleDateString("sv-SE");
+  function fmtDate(iso, opts = { day: "numeric", month: "short", year: "numeric" }) {
+    return iso ? (/* @__PURE__ */ new Date(`${iso}T00:00:00`)).toLocaleDateString("fr-FR", opts) : "—";
+  }
+  function daysUntil(iso) {
+    return Math.round((Date.parse(`${iso}T00:00:00Z`) - Date.parse(`${today()}T00:00:00Z`)) / 864e5);
+  }
+  function relDay(iso) {
+    if (!iso) return "";
+    const n = daysUntil(iso);
+    if (n === 0) return "aujourd'hui";
+    if (n === 1) return "demain";
+    if (n === -1) return "hier";
+    return n > 0 ? `dans ${n} j` : `${-n} j de retard`;
+  }
+  function badge(text, tone = "neutral") {
+    return `<span class="badge badge-${tone}">${esc(text)}</span>`;
+  }
+  var HEALTH_TONE = { ok: "success", warning: "warning", critical: "danger" };
+  var healthBadge = (h) => badge(LABELS.health[h], HEALTH_TONE[h]);
+  var STATUS_TONE = { planned: "neutral", active: "info", on_hold: "warning", completed: "success", todo: "neutral", in_progress: "info", done: "success" };
+  var projectStatusBadge = (s) => badge(LABELS.projectStatus[s], STATUS_TONE[s]);
+  var PRIORITY_TONE = { low: "neutral", medium: "info", high: "danger" };
+  var priorityBadge = (p) => badge(LABELS.priority[p], PRIORITY_TONE[p]);
+  function progressBar(pct2, tone = "info", label = "") {
+    const clamped = Math.max(0, Math.min(100, pct2 || 0));
+    return `<div class="progress progress-${tone}" role="progressbar" aria-valuenow="${Math.round(pct2 || 0)}" aria-valuemin="0" aria-valuemax="100"${label ? ` aria-label="${esc(label)}"` : ""}>
+    <div class="progress-fill" style="width:${clamped}%"></div></div>`;
+  }
+  function budgetTone(spent, budget) {
+    if (spent > budget) return "danger";
+    if (budget > 0 && spent > 0.9 * budget) return "warning";
+    return "success";
+  }
+  function stat(label, value, hint = "", tone = "") {
+    return `<div class="stat ${tone ? `stat-${tone}` : ""}">
+    <div class="stat-label">${esc(label)}</div>
+    <div class="stat-value">${value}</div>
+    ${hint ? `<div class="stat-hint">${hint}</div>` : ""}
+  </div>`;
+  }
+  function initials(name) {
+    return esc(String(name || "?").split(/\s+/).map((w) => w[0]).slice(0, 2).join("").toUpperCase());
+  }
+  function avatar(name) {
+    if (!name) return '<span class="avatar avatar-empty" title="Non assigné">?</span>';
+    return `<span class="avatar" title="${esc(name)}">${initials(name)}</span>`;
+  }
+  function empty(message, actionHtml = "") {
+    return `<div class="empty"><p>${esc(message)}</p>${actionHtml}</div>`;
+  }
+  function toast(message, tone = "info") {
+    const host = document.getElementById("toasts");
+    const node = document.createElement("div");
+    node.className = `toast toast-${tone}`;
+    node.textContent = message;
+    host.append(node);
+    setTimeout(() => node.remove(), 3500);
+  }
+  function confirmAction(message) {
+    return window.confirm(message);
+  }
+  function fieldHtml(f, value) {
+    const id2 = `f-${f.name}`;
+    const req = f.required ? " required" : "";
+    const common = `id="${id2}" name="${f.name}"${req}`;
+    let input;
+    switch (f.type) {
+      case "textarea":
+        input = `<textarea ${common} rows="3">${esc(value)}</textarea>`;
+        break;
+      case "select":
+        input = `<select ${common}>
+        ${f.required ? "" : `<option value="">${esc(f.placeholder ?? "—")}</option>`}
+        ${f.options.map(([v, l]) => `<option value="${esc(v)}"${String(v) === String(value ?? "") ? " selected" : ""}>${esc(l)}</option>`).join("")}
+      </select>`;
+        break;
+      case "checkbox":
+        return `<label class="field field-check${f.full ? " full" : ""}">
+        <input type="checkbox" ${common}${value ? " checked" : ""}> <span>${esc(f.label)}</span>
+        <small class="field-error" data-error="${f.name}"></small></label>`;
+      default: {
+        const extra = [
+          f.min !== void 0 ? `min="${f.min}"` : "",
+          f.step !== void 0 ? `step="${f.step}"` : "",
+          f.placeholder ? `placeholder="${esc(f.placeholder)}"` : ""
+        ].join(" ");
+        input = `<input type="${f.type || "text"}" ${common} value="${esc(value)}" ${extra}>`;
+      }
+    }
+    const fill = f.fill ? ` <button type="button" class="link-btn" data-fill="${f.name}" data-from="${f.fill.from}">${esc(f.fill.label)}</button>` : "";
+    return `<label class="field${f.full ? " full" : ""}" for="${id2}">
+    <span>${esc(f.label)}${f.required ? " *" : ""}${fill}</span>${input}
+    ${f.hint ? `<small class="muted">${esc(f.hint)}</small>` : ""}
+    <small class="field-error" data-error="${f.name}"></small></label>`;
+  }
+  function openForm({ title, fields, values = {}, submitLabel = "Enregistrer", onSubmit, onDelete }) {
+    const dialog = document.getElementById("modal");
+    dialog.innerHTML = `
+    <form class="modal-form" novalidate>
+      <header><h2>${esc(title)}</h2><button type="button" class="icon-btn" data-close aria-label="Fermer">×</button></header>
+      <div class="form-grid">${fields.map((f) => fieldHtml(f, values[f.name])).join("")}</div>
+      <p class="form-error" hidden></p>
+      <footer>
+        ${onDelete ? '<button type="button" class="btn btn-danger-ghost" data-delete>Supprimer</button>' : ""}
+        <span class="spacer"></span>
+        <button type="button" class="btn btn-ghost" data-close>Annuler</button>
+        <button type="submit" class="btn btn-primary">${esc(submitLabel)}</button>
+      </footer>
+    </form>`;
+    const form = dialog.querySelector("form");
+    const close = () => dialog.close();
+    dialog.querySelectorAll("[data-close]").forEach((b) => b.addEventListener("click", close));
+    dialog.querySelectorAll("[data-fill]").forEach((b) => b.addEventListener("click", (e) => {
+      e.preventDefault();
+      form.elements[b.dataset.fill].value = form.elements[b.dataset.from].value;
+    }));
+    const showErrors = (err) => {
+      form.querySelectorAll("[data-error]").forEach((n) => {
+        n.textContent = "";
+      });
+      const general = form.querySelector(".form-error");
+      const details = err?.details || {};
+      const unmatched = [];
+      for (const [key, msg] of Object.entries(details)) {
+        const slot = form.querySelector(`[data-error="${key}"]`);
+        if (slot) slot.textContent = msg;
+        else unmatched.push(`${key} : ${msg}`);
+      }
+      general.hidden = !err || Object.keys(details).length > 0 && !unmatched.length;
+      general.textContent = [err?.message, ...unmatched].filter(Boolean).join(" — ");
+    };
+    form.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const data = {};
+      for (const f of fields) {
+        const el2 = form.elements[f.name];
+        if (f.type === "checkbox") data[f.name] = el2.checked;
+        else data[f.name] = el2.value === "" ? null : el2.value;
+      }
+      const btn = form.querySelector("[type=submit]");
+      btn.disabled = true;
+      try {
+        await onSubmit(data);
+        close();
+      } catch (err) {
+        showErrors(err);
+      } finally {
+        btn.disabled = false;
+      }
+    });
+    form.querySelector("[data-delete]")?.addEventListener("click", async () => {
+      try {
+        if (await onDelete()) close();
+      } catch (err) {
+        showErrors(err);
+      }
+    });
+    dialog.showModal();
+    form.querySelector("input, textarea, select")?.focus();
+  }
+
+  // src/ui/api.js
+  var resourceOf = (name) => {
+    if (!Object.hasOwn(resources, name)) throw new AppError(`Ressource inconnue : ${name}`, void 0, 404);
+    return resources[name];
+  };
+  var toId = (raw) => {
+    const id2 = Number(raw);
+    if (!Number.isInteger(id2) || id2 <= 0) throw new AppError("Élément introuvable", void 0, 404);
+    return id2;
+  };
+  var clean = (params = {}) => Object.fromEntries(
+    Object.entries(params).filter(([, v]) => v !== void 0 && v !== null && v !== "")
+  );
+  function get(path, params = {}) {
+    const q = clean(params);
+    const [name, rawId, sub] = path.split("/");
+    switch (name) {
+      case "dashboard":
+        return dashboard(store, today());
+      case "workload":
+        return workload(store, today());
+      case "portfolio":
+        return portfolioBudget(store, { includeCompleted: q.completed !== "0" });
+      case "schema":
+        return describeSchema();
+      case "deadlines":
+        return deadlines(store, today(), { projectId: q.project_id ? toId(q.project_id) : null, until: q.until ?? null });
+      case "admin":
+        if (rawId === "stats") return store.counts();
+        break;
+      default:
+    }
+    if (name === "projects" && sub === "summary") {
+      const [summary] = projectSummaries(store, today(), toId(rawId));
+      if (!summary) throw new AppError("Projet introuvable", void 0, 404);
+      return summary;
+    }
+    if (name === "projects" && sub === "budget") {
+      const budget = projectBudget(store, toId(rawId));
+      if (!budget) throw new AppError("Projet introuvable", void 0, 404);
+      return budget;
+    }
+    const def = resourceOf(name);
+    if (!rawId) return store.list(def, q);
+    const row = store.findById(def, toId(rawId));
+    if (!row) throw new AppError("Élément introuvable", void 0, 404);
+    return row;
+  }
+  function create(resource, body = {}) {
+    if (resource === "admin/demo") return insertDemoData(store, today());
+    if (resource === "admin/reset") {
+      if (body.confirm !== "SUPPRIMER") throw new AppError("Confirmation manquante : saisissez SUPPRIMER");
+      return store.wipe();
+    }
+    return store.create(resourceOf(resource), body);
+  }
+  var api = {
+    get: async (path, params) => get(path, params),
+    create: async (resource, body) => create(resource, body),
+    update: async (resource, id2, body) => store.update(resourceOf(resource), toId(id2), body),
+    remove: async (resource, id2) => store.remove(resourceOf(resource), toId(id2)),
+    /** Analyse (dryRun) ou importe un classeur Excel. */
+    importWorkbook: async (bytes, options2) => importWorkbook(store, bytes, options2),
+    /** Classeur Excel de toute la base (ou modèle vierge). */
+    exportWorkbook: async ({ template = false } = {}) => exportWorkbook(store, { template })
+  };
+
+  // src/ui/forms.js
+  function saveHandler(resource, record, label, onDone, feminine = false) {
+    const e = feminine ? "e" : "";
+    return async (data) => {
+      const saved = record?.id ? await api.update(resource, record.id, data) : await api.create(resource, { ...record, ...data });
+      toast(record?.id ? `${label} mis${e} à jour` : `${label} créé${e}`, "success");
+      await onDone?.(saved);
+    };
+  }
+  function deleteHandler(resource, record, message, onDone) {
+    if (!record?.id) return void 0;
+    return async () => {
+      if (!confirmAction(message)) return false;
+      await api.remove(resource, record.id);
+      toast("Élément supprimé", "success");
+      await onDone?.(null);
+      return true;
+    };
+  }
+  var contributorOptions = (contributors2) => contributors2.map((c) => [c.id, c.role ? `${c.name} — ${c.role}` : c.name]);
+  function projectForm(project2, onDone) {
+    openForm({
+      title: project2?.id ? "Modifier le projet" : "Nouveau projet",
+      values: project2 ?? { status: "planned", start_date: today() },
+      fields: [
+        { name: "name", label: "Nom du projet", required: true, full: true },
+        { name: "description", label: "Description", type: "textarea", full: true },
+        { name: "status", label: "Statut", type: "select", required: true, options: options(LABELS.projectStatus) },
+        { name: "budget", label: "Budget global (€)", type: "number", min: 0, step: "any" },
+        { name: "start_date", label: "Date de début", type: "date" },
+        { name: "end_date", label: "Date de fin prévue", type: "date" }
+      ],
+      onSubmit: saveHandler("projects", project2, "Projet", onDone),
+      onDelete: deleteHandler(
+        "projects",
+        project2,
+        "Supprimer ce projet ainsi que toutes ses tâches, jalons, postes budgétaires et engagements ?",
+        onDone
+      )
+    });
+  }
+  function taskForm(task, { projects, contributors: contributors2 }, onDone) {
+    openForm({
+      title: task?.id ? "Modifier la tâche" : "Nouvelle tâche",
+      values: { status: "todo", priority: "medium", ...task },
+      fields: [
+        { name: "title", label: "Titre", required: true, full: true },
+        ...projects ? [{ name: "project_id", label: "Projet", type: "select", required: true, full: true, options: projects.map((p) => [p.id, p.name]) }] : [],
+        { name: "description", label: "Description", type: "textarea", full: true },
+        { name: "status", label: "Statut", type: "select", required: true, options: options(LABELS.taskStatus) },
+        { name: "priority", label: "Priorité", type: "select", required: true, options: options(LABELS.priority) },
+        { name: "assignee_id", label: "Responsable", type: "select", placeholder: "Non assigné", options: contributorOptions(contributors2) },
+        { name: "estimated_hours", label: "Charge estimée (heures)", type: "number", min: 0, step: "any" },
+        { name: "start_date", label: "Début", type: "date" },
+        { name: "due_date", label: "Échéance", type: "date" }
+      ],
+      onSubmit: saveHandler("tasks", task, "Tâche", onDone, true),
+      onDelete: deleteHandler("tasks", task, "Supprimer cette tâche ?", onDone)
+    });
+  }
+  function milestoneForm(milestone, onDone) {
+    openForm({
+      title: milestone?.id ? "Modifier le jalon" : "Nouveau jalon",
+      values: milestone,
+      fields: [
+        { name: "name", label: "Nom du jalon", required: true, full: true },
+        { name: "due_date", label: "Date", type: "date", required: true },
+        { name: "done", label: "Atteint", type: "checkbox" },
+        { name: "description", label: "Description", type: "textarea", full: true }
+      ],
+      onSubmit: saveHandler("milestones", milestone, "Jalon", onDone),
+      onDelete: deleteHandler("milestones", milestone, "Supprimer ce jalon ?", onDone)
+    });
+  }
+  function budgetLineForm(line, onDone) {
+    openForm({
+      title: line?.id ? "Modifier le poste budgétaire" : "Nouveau poste budgétaire",
+      values: { category: "autre", ...line },
+      fields: [
+        { name: "name", label: "Poste", required: true, full: true, placeholder: "ex. Prestations de développement" },
+        { name: "category", label: "Nature", type: "select", required: true, options: options(LABELS.category) },
+        { name: "amount", label: "Budget prévu (€)", type: "number", min: 0, step: "any" },
+        { name: "notes", label: "Commentaire", type: "textarea", full: true }
+      ],
+      onSubmit: saveHandler("budget_lines", line, "Poste", onDone),
+      onDelete: deleteHandler(
+        "budget_lines",
+        line,
+        "Supprimer ce poste ? Ses engagements resteront dans le projet, sans poste.",
+        onDone
+      )
+    });
+  }
+  function expenseForm(expense, { tasks, contributors: contributors2, lines }, onDone) {
+    openForm({
+      title: expense?.id ? "Modifier l'engagement" : "Nouvel engagement / dépense",
+      values: { date: today(), amount_invoiced: 0, ...expense },
+      fields: [
+        { name: "label", label: "Libellé", required: true, full: true, placeholder: "ex. Bon de commande lot 2" },
+        { name: "budget_line_id", label: "Poste budgétaire", type: "select", placeholder: "Non affecté", full: true, options: lines.map((l) => [l.id, l.name]) },
+        {
+          name: "amount_committed",
+          label: "Montant engagé (€)",
+          type: "number",
+          min: 0,
+          step: "any",
+          required: true,
+          hint: "Montant commandé ou signé"
+        },
+        {
+          name: "amount_invoiced",
+          label: "Montant réalisé (€)",
+          type: "number",
+          min: 0,
+          step: "any",
+          hint: "Part déjà facturée / payée",
+          fill: { from: "amount_committed", label: "Tout est réalisé" }
+        },
+        { name: "supplier", label: "Fournisseur" },
+        { name: "reference", label: "Référence", placeholder: "N° de commande ou de facture" },
+        { name: "date", label: "Date", type: "date", required: true },
+        { name: "contributor_id", label: "Contributeur", type: "select", placeholder: "Aucun", options: contributorOptions(contributors2) },
+        { name: "task_id", label: "Tâche liée", type: "select", placeholder: "Aucune", full: true, options: tasks.map((t) => [t.id, t.title]) }
+      ],
+      onSubmit: saveHandler("expenses", expense, "Engagement", onDone),
+      onDelete: deleteHandler("expenses", expense, "Supprimer cet engagement ?", onDone)
+    });
+  }
+  function contributorForm(contributor, onDone) {
+    openForm({
+      title: contributor?.id ? "Modifier le contributeur" : "Nouveau contributeur",
+      values: contributor,
+      fields: [
+        { name: "name", label: "Nom complet", required: true, full: true },
+        { name: "role", label: "Rôle", placeholder: "ex. Développeur, Designer…" },
+        { name: "email", label: "E-mail", type: "email" },
+        { name: "daily_rate", label: "Taux journalier (€)", type: "number", min: 0, step: "any" }
+      ],
+      onSubmit: saveHandler("contributors", contributor, "Contributeur", onDone),
+      onDelete: deleteHandler(
+        "contributors",
+        contributor,
+        "Supprimer ce contributeur ? Ses tâches deviendront non assignées.",
+        onDone
+      )
+    });
+  }
+
+  // src/ui/views/shared.js
+  function deadlineRow(d, { showProject = true } = {}) {
+    const kind = d.kind === "milestone" ? badge("Jalon", "milestone") : badge("Tâche", "neutral");
+    const when = d.overdue ? `<span class="text-danger">${esc(relDay(d.due_date))}</span>` : `<span class="muted">${esc(relDay(d.due_date))}</span>`;
+    return `<li class="deadline${d.overdue ? " is-overdue" : ""}">
+    <input type="checkbox" class="check" data-action="complete-deadline" data-kind="${d.kind}" data-id="${d.id}"
+      aria-label="Marquer « ${esc(d.name)} » comme terminé">
+    <div class="deadline-date"><strong>${esc(fmtDate(d.due_date, { day: "numeric", month: "short" }))}</strong>${when}</div>
+    <div class="deadline-main">
+      <div>${kind} ${esc(d.name)} ${d.priority === "high" ? priorityBadge("high") : ""}</div>
+      ${showProject ? `<a class="muted small" href="#/projets/${d.project_id}">${esc(d.project_name)}</a>` : ""}
+    </div>
+    ${d.kind === "task" ? avatar(d.assignee_name) : ""}
+  </li>`;
+  }
+  async function completeDeadline(e, refresh) {
+    const box = e.target.closest('[data-action="complete-deadline"]');
+    if (!box) return;
+    box.disabled = true;
+    try {
+      if (box.dataset.kind === "milestone") await api.update("milestones", box.dataset.id, { done: true });
+      else await api.update("tasks", box.dataset.id, { status: "done" });
+      toast("Échéance marquée comme terminée", "success");
+      await refresh();
+    } catch (err) {
+      box.checked = false;
+      box.disabled = false;
+      toast(err.message, "danger");
+    }
+  }
+
+  // src/ui/views/dashboard.js
+  async function dashboard2({ el: el2, refresh }) {
+    const d = await api.get("dashboard");
+    const t = d.totals;
+    const budgetPct = t.budget_total ? t.committed_total / t.budget_total * 100 : 0;
+    const overdue = t.tasks_overdue + t.milestones_overdue;
+    const active = d.projects.filter((p) => p.status !== "completed");
+    if (t.projects_total === 0) {
+      el2.innerHTML = welcomeHtml();
+      el2.onclick = async (e) => {
+        const action = e.target.closest("[data-action]")?.dataset.action;
+        if (action === "new-project") projectForm(null, (p) => {
+          if (p) location.hash = `#/projets/${p.id}`;
+        });
+        if (action === "open-file") document.querySelector("[data-open]").click();
+        if (action === "demo") {
+          await api.create("admin/demo", {});
+          refresh();
+        }
+      };
+      return;
+    }
+    el2.innerHTML = `
+    <header class="page-header">
+      <div><h1>Tableau de bord</h1><p class="muted">Vue d'ensemble au ${esc(fmtDate(d.today, { day: "numeric", month: "long", year: "numeric" }))}</p></div>
+      <button class="btn btn-primary" data-action="new-project">+ Nouveau projet</button>
+    </header>
+
+    <section class="stats">
+      ${stat("Projets en cours", t.projects_active, `${t.projects_total} au total · ${t.projects_at_risk} à risque`, t.projects_at_risk ? "warning" : "")}
+      ${stat("Avancement des tâches", `${t.tasks_total ? Math.round(t.tasks_done * 100 / t.tasks_total) : 0} %`, `${t.tasks_done} / ${t.tasks_total} tâches terminées`)}
+      ${stat("Budget engagé", money(t.committed_total), `sur ${money(t.budget_total)} (${Math.round(budgetPct)} %) · réalisé ${money(t.invoiced_total)}`, budgetTone(t.committed_total, t.budget_total) === "danger" ? "danger" : "")}
+      ${stat("Échéances dépassées", overdue, `${t.tasks_overdue} tâche(s) · ${t.milestones_overdue} jalon(s)`, overdue ? "danger" : "success")}
+    </section>
+
+    <section class="card">
+      <header class="card-header"><h2>Projets</h2><a href="#/projets" class="small">Tout voir →</a></header>
+      ${active.length ? `<div class="table-wrap"><table class="table">
+        <thead><tr><th>Projet</th><th>Avancement</th><th>Budget engagé</th><th>Prochaine échéance</th><th>Santé</th></tr></thead>
+        <tbody>${active.map(projectRow).join("")}</tbody></table></div>` : empty("Aucun projet en cours.", `<div class="actions center"><button class="btn btn-primary" data-action="new-project">Créer un projet</button>
+          <a class="btn" href="#/donnees">Importer un fichier Excel</a></div>`)}
+    </section>
+
+    <div class="grid-2">
+      <section class="card">
+        <header class="card-header"><h2>Échéances à 30 jours</h2><a href="#/echeances" class="small">Tout voir →</a></header>
+        ${d.deadlines.length ? `<ul class="deadlines">${d.deadlines.slice(0, 10).map((x) => deadlineRow(x)).join("")}</ul>` : empty("Aucune échéance à venir.")}
+      </section>
+      <section class="card">
+        <header class="card-header"><h2>Charge des contributeurs</h2><a href="#/contributeurs" class="small">Gérer →</a></header>
+        ${d.workload.length ? `<div class="table-wrap"><table class="table">
+          <thead><tr><th>Contributeur</th><th class="num">Ouvertes</th><th class="num">Reste</th><th class="num">Retard</th></tr></thead>
+          <tbody>${d.workload.map((c) => `<tr>
+            <td><div class="person">${avatar(c.name)}<div><strong>${esc(c.name)}</strong><div class="muted small">${esc(c.role || "")}</div></div></div></td>
+            <td class="num">${c.open_tasks}</td>
+            <td class="num">${num(c.open_hours)} h</td>
+            <td class="num">${c.overdue_tasks ? `<span class="text-danger">${c.overdue_tasks}</span>` : "0"}</td></tr>`).join("")}</tbody></table></div>` : empty("Aucun contributeur pour l'instant.", '<a class="btn" href="#/contributeurs">Ajouter des contributeurs</a>')}
+      </section>
+    </div>`;
+    el2.onclick = async (e) => {
+      const target = e.target.closest("[data-action]");
+      if (target?.dataset.action === "new-project") {
+        projectForm(null, (p) => {
+          if (p) location.hash = `#/projets/${p.id}`;
+        });
+      }
+    };
+    el2.onchange = (e) => completeDeadline(e, refresh);
+  }
+  function projectRow(p) {
+    return `<tr>
+    <td><a href="#/projets/${p.id}"><strong>${esc(p.name)}</strong></a><div>${projectStatusBadge(p.status)}</div></td>
+    <td class="w-bar">${progressBar(p.progress, "info", "Avancement")}<small class="muted">${p.progress} % · ${p.task_done}/${p.task_total}</small></td>
+    <td class="w-bar">${progressBar(p.budget ? p.committed / p.budget * 100 : p.committed ? 100 : 0, budgetTone(p.committed, p.budget), "Budget engagé")}
+      <small class="muted">${money(p.committed)} engagés / ${money(p.budget)}</small></td>
+    <td>${p.next_deadline ? `${esc(fmtDate(p.next_deadline))}<div class="muted small">${esc(relDay(p.next_deadline))}</div>` : '<span class="muted">—</span>'}</td>
+    <td>${healthBadge(p.health)}</td>
+  </tr>`;
+  }
+  function welcomeHtml() {
+    return `<section class="welcome card">
+    <h1>Bienvenue dans Pilotage de projets</h1>
+    <p class="muted">Suivez vos projets, tâches, échéances, contributeurs et budgets (postes, engagé, réalisé).
+      L'application fonctionne entièrement dans ce navigateur : rien n'est installé ni envoyé sur Internet.</p>
+    <div class="welcome-actions">
+      <button class="welcome-choice" data-action="open-file"><strong>📂 Ouvrir un fichier de données</strong>
+        <span>Reprendre un fichier .xlsx enregistré avec cette application (ou reçu d'un collègue).</span></button>
+      <button class="welcome-choice" data-action="new-project"><strong>➕ Créer un premier projet</strong>
+        <span>Partir de zéro. Vous pourrez aussi importer un fichier Excel depuis la rubrique Données.</span></button>
+      <button class="welcome-choice" data-action="demo"><strong>👀 Découvrir avec un exemple</strong>
+        <span>Charger 3 projets fictifs pour explorer l'application. Vous pourrez tout effacer ensuite.</span></button>
+    </div>
+    <p class="muted small">💾 Vos données sont conservées automatiquement dans ce navigateur. Pour les garder en lieu sûr
+      ou les transmettre, cliquez sur <strong>Enregistrer</strong> (en bas du menu) : vous obtenez un fichier Excel.</p>
+  </section>`;
+  }
+
+  // src/ui/views/projects.js
+  async function projectsList({ el: el2, refresh }) {
+    const projects = await api.get("dashboard").then((d) => d.projects);
+    const filter = sessionStorage.getItem("projects-filter") || "open";
+    const visible = projects.filter((p) => filter === "all" ? true : filter === "open" ? p.status !== "completed" : p.status === filter);
+    el2.innerHTML = `
+    <header class="page-header">
+      <div><h1>Projets</h1><p class="muted">${projects.length} projet(s)</p></div>
+      <button class="btn btn-primary" data-action="new-project">+ Nouveau projet</button>
+    </header>
+    <div class="toolbar">
+      <div class="segmented" role="group" aria-label="Filtrer les projets">
+        ${[["open", "Non terminés"], ...Object.entries(LABELS.projectStatus), ["all", "Tous"]].map(([v, l]) => `<button class="${v === filter ? "is-active" : ""}" data-action="filter" data-value="${v}">${esc(l)}</button>`).join("")}
+      </div>
+    </div>
+    ${visible.length ? `<div class="project-grid">${visible.map(card).join("")}</div>` : empty("Aucun projet ne correspond à ce filtre.", '<button class="btn btn-primary" data-action="new-project">Créer un projet</button>')}`;
+    el2.onclick = (e) => {
+      const target = e.target.closest("[data-action]");
+      if (!target) return;
+      if (target.dataset.action === "new-project") {
+        projectForm(null, (p) => {
+          if (p) location.hash = `#/projets/${p.id}`;
+        });
+      } else if (target.dataset.action === "filter") {
+        sessionStorage.setItem("projects-filter", target.dataset.value);
+        refresh();
+      }
+    };
+  }
+  function card(p) {
+    const budgetPct = p.budget ? p.committed / p.budget * 100 : p.committed ? 100 : 0;
+    return `<a class="card project-card" href="#/projets/${p.id}">
+    <div class="project-card-head">
+      <h3>${esc(p.name)}</h3>
+      ${healthBadge(p.health)}
+    </div>
+    <div class="muted small">${projectStatusBadge(p.status)} ${esc(fmtDate(p.start_date))} → ${esc(fmtDate(p.end_date))}</div>
+    ${p.description ? `<p class="clamp">${esc(p.description)}</p>` : ""}
+    <div class="metric"><span>Avancement</span><span>${p.progress} %</span></div>
+    ${progressBar(p.progress, "info", "Avancement")}
+    <div class="metric"><span>Budget engagé</span><span>${money(p.committed)} / ${money(p.budget)}</span></div>
+    ${progressBar(budgetPct, budgetTone(p.committed, p.budget), "Budget engagé")}
+    <div class="project-card-foot small">
+      <span>${p.task_total} tâche(s)${p.task_overdue ? ` · <span class="text-danger">${p.task_overdue} en retard</span>` : ""}</span>
+      <span>${p.next_deadline ? `Prochaine échéance ${esc(relDay(p.next_deadline))}` : "Aucune échéance"}</span>
+    </div>
+  </a>`;
+  }
+
+  // src/ui/views/budget.js
+  var pct = (rate) => Number.isFinite(rate) ? `${Math.round(rate * 100)} %` : "—";
+  function rateTone(committed, budget) {
+    if (committed > budget + 5e-3) return "danger";
+    if (budget > 0 && committed > 0.9 * budget) return "warning";
+    return "success";
+  }
+  var STATUS_TONE2 = { committed: "info", partial: "warning", done: "success" };
+  var expenseStatusBadge = (e) => {
+    const s = expenseStatus(e);
+    return badge(LABELS.expenseStatus[s], STATUS_TONE2[s]);
+  };
+  function budgetKpis(t, { budgetLabel = "Budget global" } = {}) {
+    return `<section class="stats stats-5">
+    ${stat(budgetLabel, money(t.budget), t.allocated !== void 0 ? `Réparti sur les postes : ${money(t.allocated)}` : "")}
+    ${stat("Engagé", money(t.committed), `${pct(t.committed_rate)} du budget`, rateTone(t.committed, t.budget) === "success" ? "" : rateTone(t.committed, t.budget))}
+    ${stat("Réalisé", money(t.invoiced), `${pct(t.invoiced_rate)} du budget · facturé / payé`)}
+    ${stat("Disponible", money(t.available), "Budget − engagé", t.available < 0 ? "danger" : "success")}
+    ${stat("Reste à payer", money(t.to_pay), "Engagé − réalisé")}
+  </section>`;
+  }
+  function budgetGauge(t) {
+    const base = Math.max(t.budget, t.committed, 1);
+    const w = (v) => `${Math.max(0, v / base * 100)}%`;
+    const over = t.committed - t.budget;
+    return `<div class="gauge" role="img" aria-label="Réalisé ${money(t.invoiced)}, engagé ${money(t.committed)}, budget ${money(t.budget)}">
+      <span class="gauge-invoiced" style="width:${w(t.invoiced)}"></span>
+      <span class="gauge-committed" style="width:${w(t.committed - t.invoiced)}"></span>
+      ${over > 0 ? "" : `<span class="gauge-available" style="width:${w(t.available)}"></span>`}
+      ${over > 0 ? `<span class="gauge-limit" style="left:${w(t.budget)}" title="Budget global"></span>` : ""}
+    </div>
+    <p class="legend small muted">
+      <span class="swatch gauge-invoiced"></span>Réalisé ${money(t.invoiced)}
+      <span class="swatch gauge-committed"></span>Engagé non réalisé ${money(t.to_pay)}
+      ${over > 0 ? `<span class="swatch is-overdue"></span><span class="text-danger">Dépassement ${money(over)}</span>` : `<span class="swatch gauge-available"></span>Disponible ${money(t.available)}`}
+    </p>`;
+  }
+  function figuresCells(f) {
+    return `<td class="num">${money(f.budget)}</td>
+    <td class="num">${money(f.committed)}</td>
+    <td class="num">${money(f.invoiced)}</td>
+    <td class="num${f.available < 0 ? " text-danger" : ""}">${money(f.available)}</td>
+    <td class="w-bar">${progressBar(Number.isFinite(f.committed_rate) ? f.committed_rate * 100 : 100, rateTone(f.committed, f.budget), "Taux d'engagement")}
+      <small class="muted">${pct(f.committed_rate)} engagé${f.over ? ' · <span class="text-danger">dépassement</span>' : ""}</small></td>`;
+  }
+  var FIGURES_HEAD = `<th class="num">Prévu</th><th class="num">Engagé</th><th class="num">Réalisé</th>
+  <th class="num">Disponible</th><th>Consommation</th>`;
+  function linesTable(b, { editable = true } = {}) {
+    const t = b.totals;
+    return `<div class="table-wrap"><table class="table${editable ? " table-hover" : ""}">
+    <thead><tr><th>Poste</th>${FIGURES_HEAD}</tr></thead>
+    <tbody>
+      ${b.lines.map((l) => `<tr${editable ? ` data-action="edit-line" data-id="${l.id}"` : ""}>
+        <td><strong>${esc(l.name)}</strong><div class="muted small">${esc(LABELS.category[l.category])}${l.expense_count ? ` · ${l.expense_count} engagement(s)` : ""}</div></td>
+        ${figuresCells(l)}</tr>`).join("")}
+      ${b.unassigned ? `<tr class="row-muted"><td><em>Engagements non affectés à un poste</em></td>
+        <td class="num">—</td><td class="num">${money(b.unassigned.committed)}</td><td class="num">${money(b.unassigned.invoiced)}</td>
+        <td class="num">—</td><td></td></tr>` : ""}
+    </tbody>
+    <tfoot>
+      <tr><td>Total des postes</td><td class="num">${money(t.allocated)}</td><td class="num">${money(t.committed)}</td>
+        <td class="num">${money(t.invoiced)}</td><td class="num${t.allocated - t.committed < 0 ? " text-danger" : ""}">${money(t.allocated - t.committed)}</td><td></td></tr>
+      <tr class="row-muted"><td>Budget global du projet</td><td class="num">${money(t.budget)}</td><td colspan="2"></td>
+        <td class="num${t.available < 0 ? " text-danger" : ""}">${money(t.available)}</td>
+        <td class="small ${t.unallocated < 0 ? "text-danger" : "muted"}">${t.unallocated < 0 ? `Postes supérieurs au budget global de ${money(-t.unallocated)}` : `Non réparti sur les postes : ${money(t.unallocated)}`}</td></tr>
+    </tfoot>
+  </table></div>`;
+  }
+  function budgetAlerts(b) {
+    const t = b.totals;
+    const alerts = [];
+    if (t.committed > t.budget + 5e-3) alerts.push(["danger", `Budget global dépassé de ${money(t.committed - t.budget)}.`]);
+    for (const l of b.lines.filter((x) => x.over)) {
+      alerts.push(["danger", `Poste « ${l.name} » dépassé de ${money(l.committed - l.budget)}.`]);
+    }
+    for (const l of b.lines.filter((x) => !x.over && x.budget > 0 && x.committed > 0.9 * x.budget)) {
+      alerts.push(["warning", `Poste « ${l.name} » engagé à ${pct(l.committed_rate)}.`]);
+    }
+    if (t.over_allocated) alerts.push(["warning", `La somme des postes dépasse le budget global de ${money(-t.unallocated)}.`]);
+    if (b.unassigned) alerts.push(["info", `${b.unassigned.expense_count} engagement(s) sans poste (${money(b.unassigned.committed)}).`]);
+    return alerts.length ? `<ul class="alerts">${alerts.map(([tone, msg]) => `<li class="alert alert-${tone}">${esc(msg)}</li>`).join("")}</ul>` : '<p class="alert alert-success">Aucun dépassement : tous les postes sont dans leur enveloppe.</p>';
+  }
+  var monthLabel = (m) => (/* @__PURE__ */ new Date(`${m}-01T00:00:00`)).toLocaleDateString("fr-FR", { month: "short", year: "numeric" });
+  function monthlyTable(monthly, budget) {
+    if (!monthly.length) return `<p class="muted small">Aucun engagement pour l'instant.</p>`;
+    return `<div class="table-wrap"><table class="table">
+    <thead><tr><th>Mois</th><th class="num">Engagé</th><th class="num">Réalisé</th>
+      <th class="num">Cumul engagé</th><th class="num">Cumul réalisé</th><th>Cumul engagé / budget</th></tr></thead>
+    <tbody>${monthly.map((m) => `<tr><td>${esc(monthLabel(m.month))}</td>
+      <td class="num">${money(m.committed)}</td><td class="num">${money(m.invoiced)}</td>
+      <td class="num">${money(m.cum_committed)}</td><td class="num">${money(m.cum_invoiced)}</td>
+      <td class="w-bar">${progressBar(Number.isFinite(m.cum_committed_rate) ? m.cum_committed_rate * 100 : 100, rateTone(m.cum_committed, budget))}
+        <small class="muted">${pct(m.cum_committed_rate)}</small></td></tr>`).join("")}</tbody>
+  </table></div>`;
+  }
+
+  // src/ui/views/project.js
+  var TABS = [
+    ["taches", "Tâches"],
+    ["planning", "Planning & jalons"],
+    ["budget", "Budget"],
+    ["equipe", "Équipe"]
+  ];
+  async function projectDetail({ el: el2, params, refresh }) {
+    const [id2, tabParam] = params;
+    const tab = TABS.some(([k]) => k === tabParam) ? tabParam : "taches";
+    const [project2, budget, tasks, milestones, expenses, contributors2] = await Promise.all([
+      api.get(`projects/${id2}/summary`),
+      api.get(`projects/${id2}/budget`),
+      api.get("tasks", { project_id: id2 }),
+      api.get("milestones", { project_id: id2 }),
+      api.get("expenses", { project_id: id2 }),
+      api.get("contributors")
+    ]);
+    const lines = budget.lines;
+    const ctx = { project: project2, budget, lines, tasks, milestones, expenses, contributors: contributors2, byId: new Map(contributors2.map((c) => [c.id, c])) };
+    const overdue = project2.task_overdue + project2.milestone_overdue;
+    el2.innerHTML = `
+    <a href="#/projets" class="back small">← Projets</a>
+    <header class="page-header">
+      <div>
+        <h1>${esc(project2.name)}</h1>
+        <div class="meta">${projectStatusBadge(project2.status)} ${healthBadge(project2.health)}
+          <span class="muted">${esc(fmtDate(project2.start_date))} → ${esc(fmtDate(project2.end_date))}
+          ${project2.end_date && project2.status !== "completed" ? `(${esc(relDay(project2.end_date))})` : ""}</span></div>
+        ${project2.description ? `<p class="muted description">${esc(project2.description)}</p>` : ""}
+      </div>
+      <button class="btn" data-action="edit-project">Modifier</button>
+    </header>
+
+    <section class="stats">
+      ${stat("Avancement", `${project2.progress} %`, progressBar(project2.progress, "info", "Avancement") + `<span>${project2.task_done} / ${project2.task_total} tâches terminées</span>`)}
+      ${stat("Budget engagé", money(project2.committed), progressBar(project2.budget ? project2.committed / project2.budget * 100 : project2.committed ? 100 : 0, rateTone(project2.committed, project2.budget), "Budget engagé") + `<span>${pct(budget.totals.committed_rate)} de ${money(project2.budget)}</span>`)}
+      ${stat("Disponible", money(project2.available), `Réalisé : ${money(project2.invoiced)} · reste à payer : ${money(project2.to_pay)}`, project2.available < 0 ? "danger" : "")}
+      ${stat("Échéances dépassées", overdue, project2.next_deadline ? `Prochaine : ${esc(fmtDate(project2.next_deadline))} (${esc(relDay(project2.next_deadline))})` : "Aucune échéance à venir", overdue ? "danger" : "success")}
+    </section>
+
+    <nav class="tabs">${TABS.map(([k, l]) => `<a href="#/projets/${id2}/${k}" class="${k === tab ? "is-active" : ""}">${l}</a>`).join("")}</nav>
+    <div class="tab-panel">${RENDER[tab](ctx)}</div>`;
+    const reload = () => refresh();
+    const actions = {
+      "edit-project": () => projectForm(project2, (p) => p ? reload() : location.hash = "#/projets"),
+      "new-task": () => taskForm({ project_id: project2.id }, ctx, reload),
+      "edit-task": (t) => taskForm(tasks.find((x) => x.id === Number(t.dataset.id)), ctx, reload),
+      "new-milestone": () => milestoneForm({ project_id: project2.id, due_date: project2.end_date }, reload),
+      "edit-milestone": (t) => milestoneForm(milestones.find((x) => x.id === Number(t.dataset.id)), reload),
+      "new-expense": () => expenseForm({ project_id: project2.id }, ctx, reload),
+      "edit-expense": (t) => expenseForm(expenses.find((x) => x.id === Number(t.dataset.id)), ctx, reload),
+      "new-line": () => budgetLineForm({ project_id: project2.id }, reload),
+      "edit-line": (t) => budgetLineForm(lines.find((x) => x.id === Number(t.dataset.id)), reload)
+    };
+    el2.onclick = (e) => {
+      const target = e.target.closest("[data-action]");
+      if (target && actions[target.dataset.action]) {
+        e.preventDefault();
+        actions[target.dataset.action](target);
+      }
+    };
+    el2.onchange = async (e) => {
+      const t = e.target;
+      if (t.dataset.action === "filter-assignee" || t.dataset.action === "filter-line") {
+        sessionStorage.setItem(`${t.dataset.action}-${id2}`, t.value);
+        return refresh();
+      }
+      if (t.dataset.action === "toggle-milestone") {
+        await patch("milestones", t.dataset.id, { done: t.checked }, reload);
+      }
+    };
+    el2.ondragstart = (e) => {
+      const card2 = e.target.closest?.("[data-task]");
+      if (!card2) return;
+      e.dataTransfer.setData("text/plain", card2.dataset.task);
+      e.dataTransfer.effectAllowed = "move";
+      card2.classList.add("is-dragging");
+    };
+    el2.ondragend = (e) => e.target.closest?.("[data-task]")?.classList.remove("is-dragging");
+    el2.ondragover = (e) => {
+      const col = e.target.closest("[data-status]");
+      if (!col) return;
+      e.preventDefault();
+      e.currentTarget.querySelectorAll(".kanban-col.is-over").forEach((c) => c !== col && c.classList.remove("is-over"));
+      col.classList.add("is-over");
+    };
+    el2.ondragleave = (e) => {
+      const col = e.target.closest("[data-status]");
+      if (col && !col.contains(e.relatedTarget)) col.classList.remove("is-over");
+    };
+    el2.ondrop = async (e) => {
+      const col = e.target.closest("[data-status]");
+      if (!col) return;
+      e.preventDefault();
+      col.classList.remove("is-over");
+      const taskId = Number(e.dataTransfer.getData("text/plain"));
+      const task = tasks.find((x) => x.id === taskId);
+      if (task && task.status !== col.dataset.status) {
+        await patch("tasks", taskId, { status: col.dataset.status }, reload);
+      }
+    };
+  }
+  async function patch(resource, id2, body, reload) {
+    try {
+      await api.update(resource, id2, body);
+      await reload();
+    } catch (err) {
+      toast(err.message, "danger");
+    }
+  }
+  function renderTasks({ project: project2, tasks, contributors: contributors2, byId: byId2 }) {
+    const filter = sessionStorage.getItem(`filter-assignee-${project2.id}`) || "";
+    const visible = tasks.filter((t) => !filter ? true : filter === "none" ? !t.assignee_id : String(t.assignee_id) === filter);
+    const now = today();
+    const columns = Object.entries(LABELS.taskStatus).map(([status, label]) => {
+      const items = visible.filter((t) => t.status === status);
+      return `<section class="kanban-col" data-status="${status}">
+      <header><h3>${label}</h3><span class="count">${items.length}</span></header>
+      <div class="kanban-items">
+        ${items.map((t) => {
+        const late = t.status !== "done" && t.due_date && t.due_date < now;
+        const who = byId2.get(t.assignee_id);
+        return `<article class="task-card${late ? " is-overdue" : ""}" draggable="true" data-task="${t.id}" data-action="edit-task" data-id="${t.id}" tabindex="0">
+            <div class="task-title">${esc(t.title)}</div>
+            <div class="task-meta">
+              ${priorityBadge(t.priority)}
+              ${t.due_date ? `<span class="${late ? "text-danger" : "muted"} small">📅 ${esc(fmtDate(t.due_date, { day: "numeric", month: "short" }))}</span>` : ""}
+              ${t.estimated_hours ? `<span class="muted small">⏱ ${num(t.estimated_hours)} h</span>` : ""}
+              <span class="spacer"></span>${avatar(who?.name)}
+            </div>
+          </article>`;
+      }).join("") || '<p class="muted small kanban-empty">Déposez une tâche ici</p>'}
+      </div>
+    </section>`;
+    }).join("");
+    return `
+    <div class="toolbar">
+      <label class="inline">Responsable
+        <select data-action="filter-assignee">
+          <option value="">Tous</option>
+          <option value="none"${filter === "none" ? " selected" : ""}>Non assigné</option>
+          ${contributors2.map((c) => `<option value="${c.id}"${String(c.id) === filter ? " selected" : ""}>${esc(c.name)}</option>`).join("")}
+        </select>
+      </label>
+      <span class="spacer"></span>
+      <button class="btn btn-primary" data-action="new-task">+ Nouvelle tâche</button>
+    </div>
+    ${tasks.length ? `<div class="kanban">${columns}</div>` : empty("Aucune tâche pour ce projet.", '<button class="btn btn-primary" data-action="new-task">Créer la première tâche</button>')}
+    <p class="muted small hint">Astuce : glissez-déposez une carte pour changer son statut, cliquez dessus pour la modifier.</p>`;
+  }
+  var toTime = (iso) => Date.parse(`${iso}T00:00:00Z`);
+  var DAY = 864e5;
+  function renderPlanning({ project: project2, tasks, milestones, byId: byId2 }) {
+    const now = today();
+    const dated = tasks.filter((t) => t.start_date || t.due_date);
+    const points = [
+      project2.start_date,
+      project2.end_date,
+      now,
+      ...dated.flatMap((t) => [t.start_date, t.due_date]),
+      ...milestones.map((m) => m.due_date)
+    ].filter(Boolean).map(toTime);
+    const min = Math.min(...points);
+    const max = Math.max(...points) + DAY;
+    const span = Math.max(max - min, DAY);
+    const pos = (iso) => (toTime(iso) - min) / span * 100;
+    const months = [];
+    const cursor = new Date(min);
+    cursor.setUTCDate(1);
+    while (cursor.getTime() < max) {
+      const t = Math.max(cursor.getTime(), min);
+      months.push({ left: (t - min) / span * 100, label: cursor.toLocaleDateString("fr-FR", { month: "short", year: "2-digit", timeZone: "UTC" }) });
+      cursor.setUTCMonth(cursor.getUTCMonth() + 1);
+    }
+    const bar = (t) => {
+      const start = t.start_date || t.due_date;
+      const end = t.due_date || t.start_date;
+      const late = t.status !== "done" && t.due_date && t.due_date < now;
+      const left = pos(start);
+      const width = Math.max((toTime(end) + DAY - toTime(start)) / span * 100, 0.8);
+      return `<div class="gantt-row">
+      <div class="gantt-label" title="${esc(t.title)}">
+        <a href="#" data-action="edit-task" data-id="${t.id}">${esc(t.title)}</a>
+        <span class="muted small">${esc(byId2.get(t.assignee_id)?.name || "Non assigné")}</span>
+      </div>
+      <div class="gantt-track">
+        <div class="gantt-bar status-${t.status}${late ? " is-overdue" : ""}" style="left:${left}%;width:${width}%"
+          title="${esc(t.title)} : ${esc(fmtDate(start))} → ${esc(fmtDate(end))} (${esc(LABELS.taskStatus[t.status])})"></div>
+      </div>
+    </div>`;
+    };
+    const gantt = `
+    <div class="gantt">
+      <div class="gantt-row gantt-scale">
+        <div class="gantt-label"></div>
+        <div class="gantt-track">
+          ${months.map((m) => `<span class="gantt-month" style="left:${m.left}%">${esc(m.label)}</span>`).join("")}
+        </div>
+      </div>
+      <div class="gantt-row gantt-milestones">
+        <div class="gantt-label"><strong>Jalons</strong></div>
+        <div class="gantt-track">
+          ${milestones.map((m) => `<span class="gantt-diamond${m.done ? " is-done" : m.due_date < now ? " is-overdue" : ""}"
+            style="left:${pos(m.due_date) + DAY / span * 50}%" title="${esc(m.name)} — ${esc(fmtDate(m.due_date))}"></span>`).join("")}
+        </div>
+      </div>
+      ${dated.map(bar).join("")}
+      <div class="gantt-overlay"><div class="gantt-label"></div><div class="gantt-track">
+        <span class="gantt-today" style="left:${pos(now) + DAY / span * 50}%" title="Aujourd'hui"></span>
+        ${project2.end_date ? `<span class="gantt-end" style="left:${pos(project2.end_date) + DAY / span * 100}%" title="Fin prévue du projet"></span>` : ""}
+      </div></div>
+    </div>
+    <p class="legend small muted">
+      <span class="swatch status-todo"></span>À faire <span class="swatch status-in_progress"></span>En cours
+      <span class="swatch status-done"></span>Terminé <span class="swatch is-overdue"></span>En retard
+      <span class="swatch today"></span>Aujourd'hui
+    </p>`;
+    const undated = tasks.length - dated.length;
+    return `
+    <div class="grid-2 grid-wide-left">
+      <section class="card">
+        <header class="card-header"><h2>Planning</h2>
+          ${undated ? `<span class="muted small">${undated} tâche(s) sans date non affichée(s)</span>` : ""}</header>
+        ${dated.length || milestones.length ? gantt : empty("Ajoutez des dates à vos tâches pour visualiser le planning.")}
+      </section>
+      <section class="card">
+        <header class="card-header"><h2>Jalons</h2><button class="btn btn-small btn-primary" data-action="new-milestone">+ Jalon</button></header>
+        ${milestones.length ? `<ul class="milestones">${milestones.map((m) => {
+      const late = !m.done && m.due_date < now;
+      return `<li class="${m.done ? "is-done" : ""}${late ? " is-overdue" : ""}">
+            <input type="checkbox" class="check" data-action="toggle-milestone" data-id="${m.id}"${m.done ? " checked" : ""}
+              aria-label="Jalon « ${esc(m.name)} » atteint">
+            <div class="grow">
+              <a href="#" data-action="edit-milestone" data-id="${m.id}"><strong>${esc(m.name)}</strong></a>
+              <div class="small ${late ? "text-danger" : "muted"}">${esc(fmtDate(m.due_date))}${m.done ? " · atteint" : ` · ${esc(relDay(m.due_date))}`}</div>
+            </div>
+          </li>`;
+    }).join("")}</ul>` : empty("Aucun jalon défini.")}
+      </section>
+    </div>`;
+  }
+  function renderBudget({ project: project2, budget, expenses, tasks, byId: byId2 }) {
+    const filter = sessionStorage.getItem(`filter-line-${project2.id}`) || "";
+    const lineName = new Map(budget.lines.map((l) => [l.id, l.name]));
+    const taskById = new Map(tasks.map((t) => [t.id, t]));
+    const visible = expenses.filter((e) => !filter || (filter === "none" ? !e.budget_line_id : String(e.budget_line_id) === filter));
+    const sum2 = (key) => visible.reduce((a, e) => a + e[key], 0);
+    return `
+    ${budgetKpis(budget.totals)}
+    <div class="grid-2 grid-wide-left">
+      <section class="card">
+        <header class="card-header"><h2>Consommation du budget global</h2></header>
+        ${budgetGauge(budget.totals)}
+      </section>
+      <section class="card">
+        <header class="card-header"><h2>Alertes</h2></header>
+        ${budgetAlerts(budget)}
+      </section>
+    </div>
+
+    <section class="card">
+      <header class="card-header"><h2>Postes budgétaires</h2>
+        <button class="btn btn-small btn-primary" data-action="new-line">+ Poste</button></header>
+      ${budget.lines.length || budget.unassigned ? linesTable(budget) : empty(
+      "Aucun poste budgétaire. Découpez le budget global en postes (prestations, licences, matériel…) pour suivre chacun.",
+      '<button class="btn btn-primary" data-action="new-line">Créer un poste</button>'
+    )}
+    </section>
+
+    <section class="card">
+      <header class="card-header"><h2>Engagements & dépenses</h2>
+        <div class="toolbar-inline">
+          <select data-action="filter-line" aria-label="Filtrer par poste">
+            <option value="">Tous les postes</option>
+            ${budget.lines.map((l) => `<option value="${l.id}"${String(l.id) === filter ? " selected" : ""}>${esc(l.name)}</option>`).join("")}
+            <option value="none"${filter === "none" ? " selected" : ""}>Non affectés</option>
+          </select>
+          <button class="btn btn-small btn-primary" data-action="new-expense">+ Engagement</button>
+        </div></header>
+      <p class="muted small">Un <strong>engagement</strong> est un montant commandé ou signé (bon de commande, contrat) ;
+        le <strong>réalisé</strong> est la part déjà facturée ou payée.</p>
+      ${visible.length ? `<div class="table-wrap"><table class="table table-hover">
+        <thead><tr><th>Date</th><th>Libellé</th><th>Poste</th><th class="num">Engagé</th><th class="num">Réalisé</th>
+          <th class="num">Reste à payer</th><th>Statut</th></tr></thead>
+        <tbody>${visible.map((e) => `<tr data-action="edit-expense" data-id="${e.id}">
+          <td>${esc(fmtDate(e.date))}</td>
+          <td>${esc(e.label)}<div class="muted small">${esc([e.supplier, e.reference, byId2.get(e.contributor_id)?.name, taskById.get(e.task_id)?.title].filter(Boolean).join(" · "))}</div></td>
+          <td>${e.budget_line_id ? esc(lineName.get(e.budget_line_id)) : '<span class="muted">Non affecté</span>'}</td>
+          <td class="num">${money(e.amount_committed)}</td>
+          <td class="num">${money(e.amount_invoiced)}</td>
+          <td class="num">${money(e.amount_committed - e.amount_invoiced)}</td>
+          <td>${expenseStatusBadge(e)}</td></tr>`).join("")}</tbody>
+        <tfoot><tr><td colspan="3">Total${filter ? " (filtré)" : ""}</td><td class="num">${money(sum2("amount_committed"))}</td>
+          <td class="num">${money(sum2("amount_invoiced"))}</td><td class="num">${money(sum2("amount_committed") - sum2("amount_invoiced"))}</td><td></td></tr></tfoot>
+      </table></div>` : empty(filter ? "Aucun engagement pour ce filtre." : "Aucun engagement enregistré pour ce projet.")}
+    </section>
+
+    <section class="card">
+      <header class="card-header"><h2>Évolution mensuelle</h2></header>
+      ${monthlyTable(budget.monthly, budget.totals.budget)}
+    </section>
+    <section class="card">
+        <header class="card-header"><h2>Main-d'œuvre interne (prévision)</h2></header>
+        <p>Charge estimée des tâches × taux journalier ÷ 8 h : <strong>${money(project2.labor_forecast)}</strong>
+          pour ${num(project2.estimated_hours)} h de travail.</p>
+        <p class="muted small">Indicatif : ce montant n'est pas compté dans l'engagé. Pour le suivre dans le budget,
+          créez un poste « Personnel interne » et enregistrez les coûts comme engagements.</p>
+    </section>`;
+  }
+  function renderTeam({ tasks, expenses, contributors: contributors2 }) {
+    const now = today();
+    const rows = [...contributors2, { id: null, name: null }].map((c) => {
+      const mine = tasks.filter((t) => (t.assignee_id ?? null) === c.id);
+      const open2 = mine.filter((t) => t.status !== "done");
+      return {
+        ...c,
+        total: mine.length,
+        done: mine.length - open2.length,
+        openHours: open2.reduce((a, t) => a + t.estimated_hours, 0),
+        hours: mine.reduce((a, t) => a + t.estimated_hours, 0),
+        overdue: open2.filter((t) => t.due_date && t.due_date < now).length,
+        spent: c.id ? expenses.filter((e) => e.contributor_id === c.id).reduce((a, e) => a + e.amount_committed, 0) : 0
+      };
+    }).filter((r) => r.total > 0 || r.spent > 0);
+    if (!rows.length) {
+      return empty("Aucun contributeur n'est encore affecté à ce projet. Assignez des tâches pour constituer l'équipe.");
+    }
+    return `<section class="card">
+    <div class="table-wrap"><table class="table">
+      <thead><tr><th>Contributeur</th><th>Avancement</th><th class="num">Reste à faire</th><th class="num">En retard</th>
+        <th class="num">Coût prévu</th><th class="num">Engagements imputés</th></tr></thead>
+      <tbody>${rows.map((r) => `<tr>
+        <td><div class="person">${avatar(r.name)}<div><strong>${esc(r.name || "Non assigné")}</strong>
+          <div class="muted small">${esc(r.role || "")}${r.daily_rate ? ` · ${money(r.daily_rate)}/j` : ""}</div></div></div></td>
+        <td class="w-bar">${progressBar(r.total ? r.done / r.total * 100 : 0, "info", "Avancement")}<small class="muted">${r.done} / ${r.total} tâches</small></td>
+        <td class="num">${num(r.openHours)} h</td>
+        <td class="num">${r.overdue ? `<span class="text-danger">${r.overdue}</span>` : "0"}</td>
+        <td class="num">${r.id ? money(r.hours * (r.daily_rate || 0) / 8) : "—"}</td>
+        <td class="num">${r.id ? money(r.spent) : "—"}</td>
+      </tr>`).join("")}</tbody>
+    </table></div></section>`;
+  }
+  var RENDER = { taches: renderTasks, planning: renderPlanning, budget: renderBudget, equipe: renderTeam };
+
+  // src/ui/views/deadlines.js
+  var GROUPS = [
+    ["En retard", (n) => n < 0],
+    ["Aujourd'hui", (n) => n === 0],
+    ["7 prochains jours", (n) => n > 0 && n <= 7],
+    ["30 prochains jours", (n) => n > 7 && n <= 30],
+    ["Plus tard", (n) => n > 30]
+  ];
+  async function deadlines2({ el: el2, refresh }) {
+    const projectId = sessionStorage.getItem("deadlines-project") || "";
+    const kind = sessionStorage.getItem("deadlines-kind") || "";
+    const [items, projects] = await Promise.all([
+      api.get("deadlines", { project_id: projectId }),
+      api.get("projects")
+    ]);
+    const visible = items.filter((d) => !kind || d.kind === kind);
+    const groups = GROUPS.map(([label, test]) => [label, visible.filter((d) => test(daysUntil(d.due_date)))]).filter(([, list]) => list.length);
+    el2.innerHTML = `
+    <header class="page-header">
+      <div><h1>Échéances</h1><p class="muted">Tâches non terminées et jalons non atteints, tous projets confondus.</p></div>
+    </header>
+    <div class="toolbar">
+      <label class="inline">Projet
+        <select data-filter="deadlines-project">
+          <option value="">Tous les projets</option>
+          ${projects.map((p) => `<option value="${p.id}"${String(p.id) === projectId ? " selected" : ""}>${esc(p.name)}</option>`).join("")}
+        </select>
+      </label>
+      <label class="inline">Type
+        <select data-filter="deadlines-kind">
+          <option value="">Tâches et jalons</option>
+          <option value="task"${kind === "task" ? " selected" : ""}>Tâches</option>
+          <option value="milestone"${kind === "milestone" ? " selected" : ""}>Jalons</option>
+        </select>
+      </label>
+    </div>
+    ${groups.length ? groups.map(([label, list]) => `
+      <section class="card">
+        <header class="card-header"><h2>${esc(label)} <span class="count">${list.length}</span></h2></header>
+        <ul class="deadlines">${list.map((d) => deadlineRow(d, { showProject: !projectId })).join("")}</ul>
+      </section>`).join("") : empty("Aucune échéance en attente. 🎉")}`;
+    el2.onchange = (e) => {
+      const filter = e.target.dataset.filter;
+      if (filter) {
+        sessionStorage.setItem(filter, e.target.value);
+        return refresh();
+      }
+      return completeDeadline(e, refresh);
+    };
+  }
+
+  // src/ui/views/contributors.js
+  async function contributors({ el: el2, refresh }) {
+    const people = await api.get("workload");
+    el2.innerHTML = `
+    <header class="page-header">
+      <div><h1>Contributeurs</h1><p class="muted">${people.length} personne(s) dans l'annuaire</p></div>
+      <button class="btn btn-primary" data-action="new">+ Nouveau contributeur</button>
+    </header>
+    ${people.length ? `<section class="card"><div class="table-wrap"><table class="table table-hover">
+      <thead><tr><th>Contributeur</th><th>E-mail</th><th class="num">Taux journalier</th><th class="num">Projets</th>
+        <th class="num">Tâches ouvertes</th><th class="num">Reste à faire</th><th class="num">En retard</th><th class="num">Terminées</th></tr></thead>
+      <tbody>${people.map((c) => `<tr data-action="edit" data-id="${c.id}">
+        <td><div class="person">${avatar(c.name)}<div><strong>${esc(c.name)}</strong><div class="muted small">${esc(c.role || "")}</div></div></div></td>
+        <td>${c.email ? `<a href="mailto:${esc(c.email)}">${esc(c.email)}</a>` : '<span class="muted">—</span>'}</td>
+        <td class="num">${money(c.daily_rate)}</td>
+        <td class="num">${c.project_count}</td>
+        <td class="num">${c.open_tasks}</td>
+        <td class="num">${num(c.open_hours)} h <span class="muted small">(${num(c.open_hours / 8)} j)</span></td>
+        <td class="num">${c.overdue_tasks ? `<span class="text-danger">${c.overdue_tasks}</span>` : "0"}</td>
+        <td class="num">${c.done_tasks}</td>
+      </tr>`).join("")}</tbody></table></div></section>` : empty(
+      "L'annuaire est vide. Ajoutez les personnes qui contribuent à vos projets.",
+      '<button class="btn btn-primary" data-action="new">Ajouter un contributeur</button>'
+    )}`;
+    el2.onclick = (e) => {
+      if (e.target.closest('a[href^="mailto:"]')) return;
+      const target = e.target.closest("[data-action]");
+      if (!target) return;
+      if (target.dataset.action === "new") contributorForm(null, refresh);
+      if (target.dataset.action === "edit") {
+        contributorForm(people.find((c) => c.id === Number(target.dataset.id)), refresh);
+      }
+    };
+  }
+
+  // src/ui/views/data.js
+  var TABLE_ORDER2 = ["projects", "budget_lines", "expenses", "tasks", "milestones", "contributors"];
+  var MAX_ROWS = 500;
+  var importState = { file: null, mode: "merge", report: null };
+  async function dataView({ el: el2, refresh }) {
+    const tab = sessionStorage.getItem("data-tab") || "projects";
+    const [schema, stats, projects, contributors2, tasks, budgetLines] = await Promise.all([
+      api.get("schema"),
+      api.get("admin/stats"),
+      api.get("projects"),
+      api.get("contributors"),
+      api.get("tasks"),
+      api.get("budget_lines")
+    ]);
+    const loaded = { projects, contributors: contributors2, tasks, budget_lines: budgetLines };
+    const rows = loaded[tab] ?? await api.get(tab);
+    const def = schema[tab];
+    const refOptions = buildRefOptions(loaded);
+    el2.innerHTML = `
+    <header class="page-header">
+      <div><h1>Données</h1><p class="muted">Importez un fichier Excel, exportez vos données et modifiez directement les tables de la base.</p></div>
+    </header>
+
+    <section class="stats stats-auto">
+      ${TABLE_ORDER2.map((k) => `<div class="stat stat-compact"><div class="stat-label">${esc(schema[k].label)}</div><div class="stat-value">${stats[k]}</div></div>`).join("")}
+    </section>
+
+    <div class="grid-2 grid-wide-left">
+      <section class="card">
+        <header class="card-header"><h2>Importer un fichier Excel</h2>
+          <button class="btn btn-small" data-action="template">Télécharger le modèle</button></header>
+        <ol class="steps muted small">
+          <li>Téléchargez le modèle (ou un export) et remplissez un onglet par table : Contributeurs, Projets, Postes budgétaires, Tâches, Jalons, Engagements.</li>
+          <li>Les liens se font par le nom (colonnes « Projet », « Poste », « Responsable »…). L'onglet « Mode d'emploi » détaille chaque colonne.</li>
+          <li>Analysez le fichier : rien n'est enregistré tant que vous n'avez pas confirmé.</li>
+        </ol>
+        <label class="dropzone" data-dropzone>
+          <input type="file" accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" data-action="pick-file" hidden>
+          <strong data-file-label>${importState.file ? esc(importState.file.name) : "Choisir un fichier .xlsx"}</strong>
+          <span class="muted small">ou glissez-déposez-le ici</span>
+        </label>
+        <fieldset class="modes">
+          <label><input type="radio" name="import-mode" value="merge"${importState.mode === "merge" ? " checked" : ""}>
+            <span><strong>Fusionner</strong> avec les données existantes <span class="muted small">— met à jour les éléments de même ID ou de même nom, ajoute les nouveaux</span></span></label>
+          <label><input type="radio" name="import-mode" value="replace"${importState.mode === "replace" ? " checked" : ""}>
+            <span><strong>Remplacer</strong> toute la base <span class="muted small">— efface tout puis charge le fichier (restauration d'une sauvegarde)</span></span></label>
+        </fieldset>
+        <div class="actions">
+          <button class="btn btn-primary" data-action="analyze"${importState.file ? "" : " disabled"}>Analyser le fichier</button>
+        </div>
+        <div data-report>${importState.report ? reportHtml(importState.report) : ""}</div>
+      </section>
+
+      <div class="stack">
+        <section class="card">
+          <header class="card-header"><h2>Exporter / sauvegarder</h2></header>
+          <p class="muted small">Toute la base dans un classeur Excel (un onglet par table). C'est aussi votre fichier de sauvegarde :
+            rouvrez-le avec « Ouvrir… » ou transmettez-le à un collègue.</p>
+          <button class="btn btn-primary" data-action="export">Enregistrer sous… (.xlsx)</button>
+        </section>
+        <section class="card danger-zone">
+          <header class="card-header"><h2>Zone sensible</h2></header>
+          <div class="actions">
+            <button class="btn" data-action="demo">Ajouter les données de démonstration</button>
+            <button class="btn btn-danger" data-action="reset">Vider toute la base…</button>
+          </div>
+          <p class="muted small">Pensez à exporter vos données avant de vider la base.</p>
+        </section>
+      </div>
+    </div>
+
+    <section class="card">
+      <header class="card-header"><h2>Éditer les tables</h2></header>
+      <nav class="tabs">${TABLE_ORDER2.map((k) => `<a href="#" data-action="tab" data-tab="${k}" class="${k === tab ? "is-active" : ""}">${esc(schema[k].label)} <span class="count">${stats[k]}</span></a>`).join("")}</nav>
+      <div class="toolbar">
+        <input type="search" placeholder="Rechercher…" data-action="search" aria-label="Rechercher dans la table">
+        <span class="muted small">Modifiez une cellule : l'enregistrement est immédiat.</span>
+        <span class="spacer"></span>
+        <button class="btn btn-primary" data-action="add">+ Ajouter une ligne</button>
+      </div>
+      ${rows.length ? gridHtml(def, rows, refOptions) : empty("Cette table est vide.")}
+    </section>`;
+    el2.onclick = async (e) => {
+      const root = e.currentTarget;
+      const target = e.target.closest("[data-action]");
+      if (!target) return;
+      const action = target.dataset.action;
+      if (action === "tab") {
+        e.preventDefault();
+        sessionStorage.setItem("data-tab", target.dataset.tab);
+        return refresh();
+      }
+      if (action === "template") {
+        downloadBytes(await api.exportWorkbook({ template: true }), "modele-pilotage-projets.xlsx");
+        return;
+      }
+      if (action === "export") {
+        const name = await saveToFile({ saveAs: true });
+        if (name) toast(`Données enregistrées dans « ${name} »`, "success");
+        return;
+      }
+      if (action === "analyze") return runImport(root, true, refresh);
+      if (action === "confirm-import") return runImport(root, false, refresh);
+      if (action === "add") return addRow(def, tab, refOptions, refresh);
+      if (action === "delete-row") {
+        if (!confirmAction("Supprimer cette ligne ? Les éléments liés (tâches, dépenses…) peuvent être supprimés ou détachés.")) return;
+        try {
+          await api.remove(tab, target.dataset.id);
+          toast("Ligne supprimée", "success");
+          refresh();
+        } catch (err) {
+          toast(err.message, "danger");
+        }
+      }
+      if (action === "demo") {
+        await api.create("admin/demo", {});
+        toast("Données de démonstration ajoutées", "success");
+        refresh();
+      }
+      if (action === "reset") {
+        const answer = window.prompt("Cette action efface définitivement tous les projets, tâches, jalons, dépenses et contributeurs.\nTapez SUPPRIMER pour confirmer :");
+        if (answer === null) return;
+        try {
+          await api.create("admin/reset", { confirm: answer.trim().toUpperCase() });
+          toast("La base a été vidée", "success");
+          refresh();
+        } catch (err) {
+          toast(err.message, "danger");
+        }
+      }
+    };
+    el2.onchange = async (e) => {
+      const root = e.currentTarget;
+      const t = e.target;
+      if (t.name === "import-mode") {
+        importState.mode = t.value;
+        return clearReport(root);
+      }
+      if (t.dataset.action === "pick-file") return pickFile2(root, t.files[0]);
+      if (t.dataset.field) return saveCell(t, def, tab);
+    };
+    el2.oninput = (e) => {
+      if (e.target.dataset.action !== "search") return;
+      const q = normalize(e.target.value);
+      e.currentTarget.querySelectorAll("tbody tr[data-search]").forEach((tr) => {
+        tr.hidden = q && !tr.dataset.search.includes(q);
+      });
+    };
+    el2.ondragover = (e) => {
+      const zone = e.target.closest("[data-dropzone]");
+      if (!zone) return;
+      e.preventDefault();
+      zone.classList.add("is-over");
+    };
+    el2.ondragleave = (e) => e.target.closest("[data-dropzone]")?.classList.remove("is-over");
+    el2.ondrop = (e) => {
+      const zone = e.target.closest("[data-dropzone]");
+      if (!zone) return;
+      e.preventDefault();
+      zone.classList.remove("is-over");
+      pickFile2(e.currentTarget, e.dataTransfer.files[0]);
+    };
+  }
+  function pickFile2(root, file) {
+    if (!file) return;
+    if (!/\.xlsx$/i.test(file.name)) {
+      toast("Choisissez un fichier Excel .xlsx (si besoin : « Enregistrer sous » > Classeur Excel)", "danger");
+      return;
+    }
+    importState.file = file;
+    root.querySelector("[data-file-label]").textContent = file.name;
+    root.querySelector('[data-action="analyze"]').disabled = false;
+    clearReport(root);
+  }
+  function clearReport(root) {
+    importState.report = null;
+    root.querySelector("[data-report]").innerHTML = "";
+  }
+  async function runImport(root, dryRun, refresh) {
+    const { file, mode } = importState;
+    if (!file) return;
+    if (!dryRun && mode === "replace" && !confirmAction("Le mode « Remplacer » va effacer toutes les données actuelles avant l'import. Continuer ?")) return;
+    const buttons = root.querySelectorAll('[data-action="analyze"], [data-action="confirm-import"]');
+    buttons.forEach((b) => {
+      b.disabled = true;
+    });
+    try {
+      const report = await api.importWorkbook(new Uint8Array(await file.arrayBuffer()), { mode, dryRun });
+      if (!dryRun && report.saved) {
+        importState.file = null;
+        importState.report = null;
+        toast("Import terminé", "success");
+        return refresh();
+      }
+      importState.report = report;
+      root.querySelector("[data-report]").innerHTML = reportHtml(report);
+    } catch (err) {
+      root.querySelector("[data-report]").innerHTML = `<p class="form-error">${esc(err.message)}</p>`;
+    } finally {
+      buttons.forEach((b) => {
+        b.disabled = false;
+      });
+    }
+  }
+  function reportHtml(r) {
+    const ok = r.errors.length === 0;
+    const total = r.sheets.reduce((a, s) => a + s.created + s.updated, 0);
+    return `<div class="report">
+    <h3>${ok ? "✅ Fichier valide" : `⚠️ ${r.errors.length}${r.errors.length >= 200 ? "+" : ""} erreur(s) à corriger`}</h3>
+    <table class="table">
+      <thead><tr><th>Onglet</th><th class="num">Lignes</th><th class="num">À créer</th><th class="num">À mettre à jour</th></tr></thead>
+      <tbody>${r.sheets.map((s) => `<tr><td>${esc(s.label)}</td><td class="num">${s.rows}</td>
+        <td class="num">${s.created}</td><td class="num">${s.updated}</td></tr>`).join("")}</tbody>
+    </table>
+    ${r.warnings.length ? `<ul class="warnings small">${r.warnings.map((w) => `<li>${esc(w)}</li>`).join("")}</ul>` : ""}
+    ${ok ? `<div class="actions">
+        <button class="btn btn-primary" data-action="confirm-import"${total ? "" : " disabled"}>
+          ${r.mode === "replace" ? "Remplacer la base par ce fichier" : "Confirmer l'import"}</button>
+        ${r.mode === "replace" ? badge("Toutes les données actuelles seront effacées", "danger") : ""}
+      </div>` : `<p class="small muted">Corrigez ces lignes dans Excel puis sélectionnez à nouveau le fichier. Rien n'a été enregistré.</p>
+      <div class="table-wrap errors"><table class="table">
+        <thead><tr><th>Onglet</th><th class="num">Ligne</th><th>Colonne</th><th>Problème</th></tr></thead>
+        <tbody>${r.errors.map((e) => `<tr><td>${esc(e.sheet)}</td><td class="num">${e.row}</td>
+          <td>${esc(e.column ?? "—")}</td><td>${esc(e.message)}</td></tr>`).join("")}</tbody>
+      </table></div>`}
+  </div>`;
+  }
+  var normalize = (s) => String(s ?? "").normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
+  function buildRefOptions({ projects, contributors: contributors2, tasks, budget_lines: lines }) {
+    const projectName = new Map(projects.map((p) => [p.id, p.name]));
+    return {
+      projects: projects.map((p) => [p.id, p.name]),
+      contributors: contributors2.map((c) => [c.id, c.name]),
+      tasks: tasks.map((t) => [t.id, `${projectName.get(t.project_id) ?? "?"} › ${t.title}`]),
+      budget_lines: lines.map((l) => [l.id, `${projectName.get(l.project_id) ?? "?"} › ${l.name}`])
+    };
+  }
+  function displayValue(f, value, refOptions) {
+    if (value === null || value === void 0) return "";
+    if (f.ref) return refOptions[f.ref].find(([id2]) => id2 === value)?.[1] ?? "";
+    if (f.labels) return LABELS[f.labels][value] ?? value;
+    if (f.type === "boolean") return value ? "oui" : "non";
+    return String(value);
+  }
+  function cellHtml(f, row, refOptions) {
+    const v = row[f.name];
+    const attrs2 = `data-field="${f.name}" data-id="${row.id}" aria-label="${esc(f.label)}"`;
+    switch (f.type) {
+      case "boolean":
+        return `<input type="checkbox" class="check" ${attrs2}${v ? " checked" : ""}>`;
+      case "enum":
+        return `<select ${attrs2}>${f.values.map((code) => `<option value="${code}"${code === v ? " selected" : ""}>${esc(LABELS[f.labels][code])}</option>`).join("")}</select>`;
+      case "ref":
+        return `<select ${attrs2}>${f.required ? "" : '<option value="">—</option>'}${refOptions[f.ref].map(([id2, label]) => `<option value="${id2}"${id2 === v ? " selected" : ""}>${esc(label)}</option>`).join("")}</select>`;
+      case "number":
+        return `<input type="number" step="any" min="${f.min ?? ""}" value="${v ?? ""}" ${attrs2}>`;
+      case "date":
+        return `<input type="date" value="${esc(v ?? "")}" ${attrs2}>`;
+      default:
+        return `<input type="${f.format === "email" ? "email" : "text"}" value="${esc(v ?? "")}" ${attrs2}>`;
+    }
+  }
+  function gridHtml(def, rows, refOptions) {
+    const shown = rows.slice(0, MAX_ROWS);
+    return `<div class="table-wrap grid-wrap"><table class="table data-grid">
+    <thead><tr><th class="num">ID</th>${def.fields.map((f) => `<th class="col-${f.type}${f.multiline ? " col-wide" : ""}">${esc(f.label)}${f.required ? " *" : ""}</th>`).join("")}<th></th></tr></thead>
+    <tbody>${shown.map((row) => `<tr data-search="${esc(normalize(def.fields.map((f) => displayValue(f, row[f.name], refOptions)).join(" ")))}">
+      <td class="num muted">${row.id}</td>
+      ${def.fields.map((f) => `<td class="col-${f.type}${f.multiline ? " col-wide" : ""}">${cellHtml(f, row, refOptions)}</td>`).join("")}
+      <td><button class="icon-btn danger" data-action="delete-row" data-id="${row.id}" title="Supprimer la ligne" aria-label="Supprimer la ligne ${row.id}">🗑</button></td>
+    </tr>`).join("")}</tbody>
+  </table></div>
+  ${rows.length > MAX_ROWS ? `<p class="muted small">${MAX_ROWS} premières lignes affichées sur ${rows.length}. Utilisez l'export Excel pour tout voir.</p>` : ""}`;
+  }
+  async function saveCell(input, def, tab) {
+    const field = def.fields.find((f) => f.name === input.dataset.field);
+    const value = field.type === "boolean" ? input.checked : input.value === "" ? null : input.value;
+    const cell = input.closest("td");
+    cell.classList.remove("is-saved", "is-invalid");
+    try {
+      await api.update(tab, input.dataset.id, { [field.name]: value });
+      input.defaultValue = input.value;
+      if (input.tagName === "SELECT") [...input.options].forEach((o) => {
+        o.defaultSelected = o.selected;
+      });
+      if (field.type === "boolean") input.defaultChecked = input.checked;
+      void cell.offsetWidth;
+      cell.classList.add("is-saved");
+    } catch (err) {
+      cell.classList.add("is-invalid");
+      const labelOf = (key) => def.fields.find((f) => f.name === key)?.label ?? key;
+      const detail = Object.entries(err.details ?? {}).map(([key, msg]) => `${labelOf(key)} : ${msg}`).join(" ; ");
+      toast(detail || `${field.label} : ${err.message}`, "danger");
+      if (field.type === "boolean") input.checked = input.defaultChecked;
+      else if (input.tagName === "SELECT") [...input.options].forEach((o) => {
+        o.selected = o.defaultSelected;
+      });
+      else input.value = input.defaultValue;
+    }
+  }
+  function addRow(def, tab, refOptions, refresh) {
+    const fields = def.fields.map((f) => {
+      const base = { name: f.name, label: f.label, required: f.required };
+      switch (f.type) {
+        case "enum":
+          return { ...base, type: "select", options: options(LABELS[f.labels]) };
+        case "ref":
+          return { ...base, type: "select", options: refOptions[f.ref], full: true };
+        case "boolean":
+          return { ...base, type: "checkbox" };
+        case "number":
+          return { ...base, type: "number", min: f.min, step: "any" };
+        case "date":
+          return { ...base, type: "date" };
+        default:
+          return { ...base, type: f.multiline ? "textarea" : f.format === "email" ? "email" : "text", full: f.multiline };
+      }
+    });
+    const defaults = Object.fromEntries(def.fields.filter((f) => f.default !== void 0).map((f) => [f.name, f.default]));
+    openForm({
+      title: `Nouvelle ligne — ${def.label}`,
+      fields,
+      values: defaults,
+      submitLabel: "Ajouter",
+      onSubmit: async (data) => {
+        await api.create(tab, data);
+        toast("Ligne ajoutée", "success");
+        refresh();
+      }
+    });
+  }
+
+  // src/ui/views/portfolio.js
+  async function portfolio({ el: el2, refresh }) {
+    const includeCompleted = sessionStorage.getItem("portfolio-completed") !== "0";
+    const data = await api.get("portfolio", { completed: includeCompleted ? "1" : "0" });
+    const budgets = await Promise.all(data.projects.map((p) => api.get(`projects/${p.id}/budget`)));
+    const t = data.totals;
+    const alerts = [];
+    for (const b of budgets) {
+      const name = b.project.name;
+      if (b.totals.committed > b.totals.budget + 5e-3) {
+        alerts.push(["danger", b.project.id, `${name} : budget global dépassé de ${money(b.totals.committed - b.totals.budget)}`]);
+      }
+      for (const l of b.lines.filter((x) => x.over)) {
+        alerts.push(["danger", b.project.id, `${name} › ${l.name} : poste dépassé de ${money(l.committed - l.budget)}`]);
+      }
+      for (const l of b.lines.filter((x) => !x.over && x.budget > 0 && x.committed > 0.9 * x.budget)) {
+        alerts.push(["warning", b.project.id, `${name} › ${l.name} : engagé à ${pct(l.committed_rate)}`]);
+      }
+      if (b.totals.over_allocated) {
+        alerts.push(["warning", b.project.id, `${name} : postes supérieurs au budget global de ${money(-b.totals.unallocated)}`]);
+      }
+    }
+    el2.innerHTML = `
+    <header class="page-header">
+      <div><h1>Project management</h1>
+        <p class="muted">Pilotage budgétaire consolidé : budget global, postes de dépense, engagé et réalisé.</p></div>
+      <label class="inline small"><input type="checkbox" data-action="toggle-completed"${includeCompleted ? " checked" : ""}> Inclure les projets terminés</label>
+    </header>
+
+    ${data.projects.length ? `
+    ${budgetKpis(t, { budgetLabel: "Budget global" })}
+
+    <div class="grid-2 grid-wide-left">
+      <section class="card">
+        <header class="card-header"><h2>Consommation du budget (tous projets)</h2></header>
+        ${budgetGauge(t)}
+        <p class="muted small">Engagé = commandes et contrats signés · Réalisé = part facturée ou payée ·
+          Disponible = budget − engagé · Reste à payer = engagé − réalisé.</p>
+      </section>
+      <section class="card">
+        <header class="card-header"><h2>Alertes <span class="count">${alerts.length}</span></h2></header>
+        ${alerts.length ? `<ul class="alerts">${alerts.map(([tone, id2, msg]) => `<li class="alert alert-${tone}"><a href="#/projets/${id2}/budget">${esc(msg)}</a></li>`).join("")}</ul>` : '<p class="alert alert-success">Aucun dépassement : tous les projets et postes sont dans leur enveloppe.</p>'}
+      </section>
+    </div>
+
+    <section class="card">
+      <header class="card-header"><h2>Budget par projet</h2></header>
+      <div class="table-wrap"><table class="table table-hover">
+        <thead><tr><th>Projet</th>${FIGURES_HEAD}<th class="num">Reste à payer</th></tr></thead>
+        <tbody>${data.projects.map((p) => `<tr data-href="#/projets/${p.id}/budget">
+          <td><a href="#/projets/${p.id}/budget"><strong>${esc(p.name)}</strong></a>
+            <div>${projectStatusBadge(p.status)} <span class="muted small">${p.line_count} poste(s)</span></div></td>
+          ${figuresCells(p)}
+          <td class="num">${money(p.to_pay)}</td></tr>`).join("")}</tbody>
+        <tfoot><tr><td>Total</td><td class="num">${money(t.budget)}</td><td class="num">${money(t.committed)}</td>
+          <td class="num">${money(t.invoiced)}</td><td class="num${t.available < 0 ? " text-danger" : ""}">${money(t.available)}</td>
+          <td>${pct(t.committed_rate)} engagé</td><td class="num">${money(t.to_pay)}</td></tr></tfoot>
+      </table></div>
+    </section>
+
+    <section class="card">
+        <header class="card-header"><h2>Par nature de dépense</h2></header>
+        ${data.byCategory.length ? `<div class="table-wrap"><table class="table">
+          <thead><tr><th>Nature</th>${FIGURES_HEAD}</tr></thead>
+          <tbody>${data.byCategory.map((c) => `<tr>
+            <td>${c.category ? esc(LABELS.category[c.category]) : '<em class="muted">Non affecté à un poste</em>'}</td>
+            ${figuresCells(c)}</tr>`).join("")}</tbody>
+        </table></div>` : '<p class="muted small">Aucun poste budgétaire défini.</p>'}
+    </section>
+    <section class="card">
+        <header class="card-header"><h2>Évolution mensuelle (tous projets)</h2></header>
+        ${monthlyTable(data.monthly, t.budget)}
+    </section>` : empty("Aucun projet à afficher.", '<a class="btn btn-primary" href="#/projets">Aller aux projets</a>')}`;
+    el2.onclick = (e) => {
+      if (e.target.closest("a")) return;
+      const row = e.target.closest("[data-href]");
+      if (row) location.hash = row.dataset.href;
+    };
+    el2.onchange = (e) => {
+      if (e.target.dataset.action !== "toggle-completed") return;
+      sessionStorage.setItem("portfolio-completed", e.target.checked ? "1" : "0");
+      refresh();
+    };
+  }
+
+  // src/ui/app.js
+  var ROUTES = [
+    [/^#?\/?$/, "dashboard", dashboard2],
+    [/^#\/projets\/?$/, "projets", projectsList],
+    [/^#\/pilotage\/?$/, "pilotage", portfolio],
+    [/^#\/projets\/(\d+)(?:\/([\w-]+))?\/?$/, "projets", projectDetail],
+    [/^#\/echeances\/?$/, "echeances", deadlines2],
+    [/^#\/contributeurs\/?$/, "contributeurs", contributors],
+    [/^#\/donnees\/?$/, "donnees", dataView]
+  ];
+  var HANDLERS = ["onclick", "onchange", "oninput", "ondragstart", "ondragend", "ondragover", "ondragleave", "ondrop"];
+  var el = document.getElementById("app");
+  var renderId = 0;
+  async function render() {
+    const current = ++renderId;
+    const hash = location.hash || "#/";
+    const match = ROUTES.map(([re, nav, view2]) => [hash.match(re), nav, view2]).find(([m2]) => m2);
+    document.querySelectorAll("[data-nav]").forEach((a) => a.classList.toggle("is-active", a.dataset.nav === match?.[1]));
+    for (const h of HANDLERS) el[h] = null;
+    if (!match) {
+      el.innerHTML = '<div class="empty"><h1>Page introuvable</h1><a class="btn" href="#/">Retour au tableau de bord</a></div>';
+      return;
+    }
+    const [m, , view] = match;
+    if (!el.children.length) el.innerHTML = '<p class="loading">Chargement…</p>';
+    try {
+      const target = document.createElement("div");
+      await view({ el: target, params: m.slice(1), refresh: render });
+      if (current !== renderId) return;
+      for (const h of HANDLERS) el[h] = target[h];
+      el.replaceChildren(...target.childNodes);
+    } catch (err) {
+      if (current !== renderId) return;
+      console.error(err);
+      el.innerHTML = `<div class="empty"><h1>Impossible d'afficher la page</h1><p>${esc(err.message)}</p>
+      <a class="btn" href="#/">Retour au tableau de bord</a></div>`;
+    }
+  }
+  var ago = (iso) => {
+    const min = Math.round((Date.now() - Date.parse(iso)) / 6e4);
+    if (min < 1) return "à l'instant";
+    if (min < 60) return `il y a ${min} min`;
+    const d = new Date(iso);
+    return d.toDateString() === (/* @__PURE__ */ new Date()).toDateString() ? `à ${d.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}` : `le ${d.toLocaleDateString("fr-FR", { day: "numeric", month: "short" })}`;
+  };
+  function renderSaveStatus() {
+    const box = document.querySelector("[data-save-status]");
+    const lines = [];
+    if (!saveState.browserStorage) {
+      lines.push('<span class="warn">⚠ Ce navigateur ne conserve pas les données : enregistrez un fichier avant de fermer.</span>');
+    }
+    if (saveState.lastFileSave) {
+      lines.push(`<span>Fichier : <strong>${esc(saveState.fileName ?? "")}</strong></span>`);
+      lines.push(saveState.unsavedChanges ? '<span class="warn">● Modifications non enregistrées dans le fichier</span>' : `<span class="ok">✓ Enregistré ${esc(ago(saveState.lastFileSave))}</span>`);
+    } else if (store.counts().projects > 0) {
+      lines.push('<span class="warn">● Jamais enregistré dans un fichier</span>');
+    } else {
+      lines.push("<span>Aucune donnée pour l'instant</span>");
+    }
+    box.innerHTML = lines.join("");
+  }
+  async function save() {
+    try {
+      const name = await saveToFile();
+      if (name) toast(`Données enregistrées dans « ${name} »`, "success");
+    } catch (err) {
+      toast(`Enregistrement impossible : ${err.message}`, "danger");
+    }
+  }
+  async function open() {
+    if (saveState.unsavedChanges && store.counts().projects > 0 && !confirmAction("Les données actuelles contiennent des modifications non enregistrées dans un fichier.\nOuvrir un autre fichier les remplacera. Continuer ?")) return;
+    const file = await pickFile();
+    if (!file) return;
+    try {
+      const report = openDataFile(file);
+      if (report.saved) {
+        toast(`Fichier « ${file.name} » ouvert`, "success");
+        location.hash = "#/";
+        render();
+      } else {
+        toast(`Le fichier contient ${report.errors.length} erreur(s) : utilisez la rubrique Données pour les voir.`, "danger");
+      }
+    } catch (err) {
+      toast(err.message, "danger");
+    }
+  }
+  document.querySelector("[data-save]").addEventListener("click", save);
+  document.querySelector("[data-open]").addEventListener("click", open);
+  document.addEventListener("keydown", (e) => {
+    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "s") {
+      e.preventDefault();
+      save();
+    }
+  });
+  onSaveStateChange(renderSaveStatus);
+  setInterval(renderSaveStatus, 6e4);
+  window.addEventListener("data-reloaded", () => {
+    toast("Données mises à jour depuis un autre onglet");
+    render();
+  });
+  initPersistence();
+  var lastHash = location.hash;
+  window.addEventListener("hashchange", () => {
+    const samePage = lastHash.split("/").slice(0, 3).join("/") === location.hash.split("/").slice(0, 3).join("/");
+    lastHash = location.hash;
+    render().then(() => {
+      if (!samePage) window.scrollTo(0, 0);
+    });
+  });
+  render();
+})();
+</script>
+</body>
+</html>

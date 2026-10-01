@@ -1,9 +1,10 @@
 import { api } from '../api.js';
 import {
-  esc, money, num, fmtDate, relDay, today, stat, badge, progressBar, budgetTone, healthBadge,
+  esc, money, num, fmtDate, relDay, today, stat, progressBar, healthBadge,
   projectStatusBadge, priorityBadge, avatar, empty, toast, LABELS,
 } from '../ui.js';
-import { projectForm, taskForm, milestoneForm, expenseForm } from '../forms.js';
+import { projectForm, taskForm, milestoneForm, expenseForm, budgetLineForm } from '../forms.js';
+import { budgetKpis, budgetGauge, budgetAlerts, linesTable, monthlyTable, expenseStatusBadge, pct, rateTone } from './budget.js';
 
 const TABS = [
   ['taches', 'Tâches'],
@@ -15,14 +16,16 @@ const TABS = [
 export async function projectDetail({ el, params, refresh }) {
   const [id, tabParam] = params;
   const tab = TABS.some(([k]) => k === tabParam) ? tabParam : 'taches';
-  const [project, tasks, milestones, expenses, contributors] = await Promise.all([
+  const [project, budget, tasks, milestones, expenses, contributors] = await Promise.all([
     api.get(`projects/${id}/summary`),
+    api.get(`projects/${id}/budget`),
     api.get('tasks', { project_id: id }),
     api.get('milestones', { project_id: id }),
     api.get('expenses', { project_id: id }),
     api.get('contributors'),
   ]);
-  const ctx = { project, tasks, milestones, expenses, contributors, byId: new Map(contributors.map((c) => [c.id, c])) };
+  const lines = budget.lines;
+  const ctx = { project, budget, lines, tasks, milestones, expenses, contributors, byId: new Map(contributors.map((c) => [c.id, c])) };
   const overdue = project.task_overdue + project.milestone_overdue;
 
   el.innerHTML = `
@@ -40,8 +43,8 @@ export async function projectDetail({ el, params, refresh }) {
 
     <section class="stats">
       ${stat('Avancement', `${project.progress} %`, progressBar(project.progress, 'info', 'Avancement') + `<span>${project.task_done} / ${project.task_total} tâches terminées</span>`)}
-      ${stat('Budget consommé', money(project.spent), progressBar(project.budget ? (project.spent / project.budget) * 100 : 0, budgetTone(project.spent, project.budget), 'Budget') + `<span>sur ${money(project.budget)}</span>`)}
-      ${stat('Reste disponible', money(project.remaining_budget), `Prévision main-d'œuvre : ${money(project.labor_forecast)}`, project.remaining_budget < 0 ? 'danger' : '')}
+      ${stat('Budget engagé', money(project.committed), progressBar(project.budget ? (project.committed / project.budget) * 100 : (project.committed ? 100 : 0), rateTone(project.committed, project.budget), 'Budget engagé') + `<span>${pct(budget.totals.committed_rate)} de ${money(project.budget)}</span>`)}
+      ${stat('Disponible', money(project.available), `Réalisé : ${money(project.invoiced)} · reste à payer : ${money(project.to_pay)}`, project.available < 0 ? 'danger' : '')}
       ${stat('Échéances dépassées', overdue, project.next_deadline ? `Prochaine : ${esc(fmtDate(project.next_deadline))} (${esc(relDay(project.next_deadline))})` : 'Aucune échéance à venir', overdue ? 'danger' : 'success')}
     </section>
 
@@ -57,6 +60,8 @@ export async function projectDetail({ el, params, refresh }) {
     'edit-milestone': (t) => milestoneForm(milestones.find((x) => x.id === Number(t.dataset.id)), reload),
     'new-expense': () => expenseForm({ project_id: project.id }, ctx, reload),
     'edit-expense': (t) => expenseForm(expenses.find((x) => x.id === Number(t.dataset.id)), ctx, reload),
+    'new-line': () => budgetLineForm({ project_id: project.id }, reload),
+    'edit-line': (t) => budgetLineForm(lines.find((x) => x.id === Number(t.dataset.id)), reload),
   };
 
   el.onclick = (e) => {
@@ -69,8 +74,8 @@ export async function projectDetail({ el, params, refresh }) {
 
   el.onchange = async (e) => {
     const t = e.target;
-    if (t.dataset.action === 'filter-assignee') {
-      sessionStorage.setItem(`assignee-filter-${id}`, t.value);
+    if (t.dataset.action === 'filter-assignee' || t.dataset.action === 'filter-line') {
+      sessionStorage.setItem(`${t.dataset.action}-${id}`, t.value);
       return refresh();
     }
     if (t.dataset.action === 'toggle-milestone') {
@@ -123,7 +128,7 @@ async function patch(resource, id, body, reload) {
 // --- Onglet Tâches (kanban) ------------------------------------------------
 
 function renderTasks({ project, tasks, contributors, byId }) {
-  const filter = sessionStorage.getItem(`assignee-filter-${project.id}`) || '';
+  const filter = sessionStorage.getItem(`filter-assignee-${project.id}`) || '';
   const visible = tasks.filter((t) =>
     !filter ? true : filter === 'none' ? !t.assignee_id : String(t.assignee_id) === filter);
   const now = today();
@@ -267,55 +272,73 @@ function renderPlanning({ project, tasks, milestones, byId }) {
 
 // --- Onglet Budget ----------------------------------------------------------
 
-function renderBudget({ project, expenses, tasks, byId }) {
-  const byCategory = Object.keys(LABELS.category)
-    .map((k) => ({ key: k, total: expenses.filter((e) => e.category === k).reduce((a, e) => a + e.amount, 0) }))
-    .filter((c) => c.total > 0)
-    .sort((a, b) => b.total - a.total);
-  const maxCat = Math.max(...byCategory.map((c) => c.total), 1);
+function renderBudget({ project, budget, expenses, tasks, byId }) {
+  const filter = sessionStorage.getItem(`filter-line-${project.id}`) || '';
+  const lineName = new Map(budget.lines.map((l) => [l.id, l.name]));
   const taskById = new Map(tasks.map((t) => [t.id, t]));
-  const pct = project.budget ? Math.round((project.spent / project.budget) * 100) : 0;
-  // Main-d'œuvre restante : charge des tâches non terminées × taux journalier / 8 h.
-  const remainingLabor = tasks
-    .filter((t) => t.status !== 'done' && t.assignee_id)
-    .reduce((a, t) => a + (t.estimated_hours * (byId.get(t.assignee_id)?.daily_rate || 0)) / 8, 0);
-  const committed = project.spent + remainingLabor;
+  const visible = expenses.filter((e) => !filter || (filter === 'none' ? !e.budget_line_id : String(e.budget_line_id) === filter));
+  const sum = (key) => visible.reduce((a, e) => a + e[key], 0);
 
   return `
-    <div class="grid-2 grid-wide-right">
+    ${budgetKpis(budget.totals)}
+    <div class="grid-2 grid-wide-left">
       <section class="card">
-        <header class="card-header"><h2>Synthèse</h2></header>
-        <dl class="kv">
-          <dt>Budget alloué</dt><dd>${money(project.budget)}</dd>
-          <dt>Dépensé</dt><dd>${money(project.spent)} <span class="muted">(${pct} %)</span></dd>
-          <dt>Reste disponible</dt><dd class="${project.remaining_budget < 0 ? 'text-danger' : ''}">${money(project.remaining_budget)}</dd>
-          <dt title="Charge estimée de toutes les tâches × taux journalier / 8 h">Prévision main-d'œuvre totale</dt><dd>${money(project.labor_forecast)}</dd>
-          <dt title="Charge estimée des tâches non terminées × taux journalier / 8 h">Main-d'œuvre restante</dt><dd>${money(remainingLabor)}</dd>
-          <dt title="Dépenses engagées + main-d'œuvre restante">Coût projeté à terminaison</dt>
-          <dd class="${committed > project.budget ? 'text-danger' : ''}">${money(committed)}</dd>
-        </dl>
-        ${progressBar(project.budget ? (project.spent / project.budget) * 100 : 0, budgetTone(project.spent, project.budget), 'Budget consommé')}
-        <h3 class="subhead">Par catégorie</h3>
-        ${byCategory.length ? `<ul class="bars">${byCategory.map((c) => `<li>
-          <span>${esc(LABELS.category[c.key])}</span>
-          <div class="hbar"><div style="width:${(c.total / maxCat) * 100}%"></div></div>
-          <span class="num">${money(c.total)}</span></li>`).join('')}</ul>`
-        : '<p class="muted small">Aucune dépense enregistrée.</p>'}
+        <header class="card-header"><h2>Consommation du budget global</h2></header>
+        ${budgetGauge(budget.totals)}
       </section>
       <section class="card">
-        <header class="card-header"><h2>Dépenses</h2><button class="btn btn-small btn-primary" data-action="new-expense">+ Dépense</button></header>
-        ${expenses.length ? `<div class="table-wrap"><table class="table table-hover">
-          <thead><tr><th>Date</th><th>Libellé</th><th>Catégorie</th><th>Lien</th><th class="num">Montant</th></tr></thead>
-          <tbody>${expenses.map((e) => `<tr data-action="edit-expense" data-id="${e.id}">
-            <td>${esc(fmtDate(e.date))}</td>
-            <td>${esc(e.label)}</td>
-            <td>${badge(LABELS.category[e.category])}</td>
-            <td class="small muted">${esc([byId.get(e.contributor_id)?.name, taskById.get(e.task_id)?.title].filter(Boolean).join(' · ') || '—')}</td>
-            <td class="num">${money(e.amount)}</td></tr>`).join('')}</tbody>
-          <tfoot><tr><td colspan="4">Total</td><td class="num">${money(project.spent)}</td></tr></tfoot>
-        </table></div>` : empty('Aucune dépense enregistrée pour ce projet.')}
+        <header class="card-header"><h2>Alertes</h2></header>
+        ${budgetAlerts(budget)}
       </section>
-    </div>`;
+    </div>
+
+    <section class="card">
+      <header class="card-header"><h2>Postes budgétaires</h2>
+        <button class="btn btn-small btn-primary" data-action="new-line">+ Poste</button></header>
+      ${budget.lines.length || budget.unassigned ? linesTable(budget)
+        : empty('Aucun poste budgétaire. Découpez le budget global en postes (prestations, licences, matériel…) pour suivre chacun.',
+          '<button class="btn btn-primary" data-action="new-line">Créer un poste</button>')}
+    </section>
+
+    <section class="card">
+      <header class="card-header"><h2>Engagements & dépenses</h2>
+        <div class="toolbar-inline">
+          <select data-action="filter-line" aria-label="Filtrer par poste">
+            <option value="">Tous les postes</option>
+            ${budget.lines.map((l) => `<option value="${l.id}"${String(l.id) === filter ? ' selected' : ''}>${esc(l.name)}</option>`).join('')}
+            <option value="none"${filter === 'none' ? ' selected' : ''}>Non affectés</option>
+          </select>
+          <button class="btn btn-small btn-primary" data-action="new-expense">+ Engagement</button>
+        </div></header>
+      <p class="muted small">Un <strong>engagement</strong> est un montant commandé ou signé (bon de commande, contrat) ;
+        le <strong>réalisé</strong> est la part déjà facturée ou payée.</p>
+      ${visible.length ? `<div class="table-wrap"><table class="table table-hover">
+        <thead><tr><th>Date</th><th>Libellé</th><th>Poste</th><th class="num">Engagé</th><th class="num">Réalisé</th>
+          <th class="num">Reste à payer</th><th>Statut</th></tr></thead>
+        <tbody>${visible.map((e) => `<tr data-action="edit-expense" data-id="${e.id}">
+          <td>${esc(fmtDate(e.date))}</td>
+          <td>${esc(e.label)}<div class="muted small">${esc([e.supplier, e.reference, byId.get(e.contributor_id)?.name, taskById.get(e.task_id)?.title].filter(Boolean).join(' · '))}</div></td>
+          <td>${e.budget_line_id ? esc(lineName.get(e.budget_line_id)) : '<span class="muted">Non affecté</span>'}</td>
+          <td class="num">${money(e.amount_committed)}</td>
+          <td class="num">${money(e.amount_invoiced)}</td>
+          <td class="num">${money(e.amount_committed - e.amount_invoiced)}</td>
+          <td>${expenseStatusBadge(e)}</td></tr>`).join('')}</tbody>
+        <tfoot><tr><td colspan="3">Total${filter ? ' (filtré)' : ''}</td><td class="num">${money(sum('amount_committed'))}</td>
+          <td class="num">${money(sum('amount_invoiced'))}</td><td class="num">${money(sum('amount_committed') - sum('amount_invoiced'))}</td><td></td></tr></tfoot>
+      </table></div>` : empty(filter ? 'Aucun engagement pour ce filtre.' : 'Aucun engagement enregistré pour ce projet.')}
+    </section>
+
+    <section class="card">
+      <header class="card-header"><h2>Évolution mensuelle</h2></header>
+      ${monthlyTable(budget.monthly, budget.totals.budget)}
+    </section>
+    <section class="card">
+        <header class="card-header"><h2>Main-d'œuvre interne (prévision)</h2></header>
+        <p>Charge estimée des tâches × taux journalier ÷ 8 h : <strong>${money(project.labor_forecast)}</strong>
+          pour ${num(project.estimated_hours)} h de travail.</p>
+        <p class="muted small">Indicatif : ce montant n'est pas compté dans l'engagé. Pour le suivre dans le budget,
+          créez un poste « Personnel interne » et enregistrez les coûts comme engagements.</p>
+    </section>`;
 }
 
 // --- Onglet Équipe ----------------------------------------------------------
@@ -332,7 +355,7 @@ function renderTeam({ tasks, expenses, contributors }) {
       openHours: open.reduce((a, t) => a + t.estimated_hours, 0),
       hours: mine.reduce((a, t) => a + t.estimated_hours, 0),
       overdue: open.filter((t) => t.due_date && t.due_date < now).length,
-      spent: c.id ? expenses.filter((e) => e.contributor_id === c.id).reduce((a, e) => a + e.amount, 0) : 0,
+      spent: c.id ? expenses.filter((e) => e.contributor_id === c.id).reduce((a, e) => a + e.amount_committed, 0) : 0,
     };
   }).filter((r) => r.total > 0 || r.spent > 0);
 
@@ -342,7 +365,7 @@ function renderTeam({ tasks, expenses, contributors }) {
   return `<section class="card">
     <div class="table-wrap"><table class="table">
       <thead><tr><th>Contributeur</th><th>Avancement</th><th class="num">Reste à faire</th><th class="num">En retard</th>
-        <th class="num">Coût prévu</th><th class="num">Dépenses imputées</th></tr></thead>
+        <th class="num">Coût prévu</th><th class="num">Engagements imputés</th></tr></thead>
       <tbody>${rows.map((r) => `<tr>
         <td><div class="person">${avatar(r.name)}<div><strong>${esc(r.name || 'Non assigné')}</strong>
           <div class="muted small">${esc(r.role || '')}${r.daily_rate ? ` · ${money(r.daily_rate)}/j` : ''}</div></div></div></td>

@@ -1,8 +1,9 @@
 // Rubrique « Données » : import / export Excel et édition directe des tables.
 import { api } from '../api.js';
 import { esc, badge, empty, toast, openForm, confirmAction, LABELS, options } from '../ui.js';
+import { downloadBytes, saveToFile } from '../state.js';
 
-const TABLE_ORDER = ['projects', 'tasks', 'milestones', 'expenses', 'contributors'];
+const TABLE_ORDER = ['projects', 'budget_lines', 'expenses', 'tasks', 'milestones', 'contributors'];
 const MAX_ROWS = 500;
 
 // Fichier sélectionné et mode d'import : conservés entre deux affichages de la page.
@@ -10,29 +11,30 @@ const importState = { file: null, mode: 'merge', report: null };
 
 export async function dataView({ el, refresh }) {
   const tab = sessionStorage.getItem('data-tab') || 'projects';
-  const [schema, stats, projects, contributors, tasks] = await Promise.all([
-    api.get('schema'), api.get('admin/stats'), api.get('projects'), api.get('contributors'), api.get('tasks'),
+  const [schema, stats, projects, contributors, tasks, budgetLines] = await Promise.all([
+    api.get('schema'), api.get('admin/stats'), api.get('projects'), api.get('contributors'), api.get('tasks'), api.get('budget_lines'),
   ]);
-  const rows = tab === 'projects' ? projects : tab === 'contributors' ? contributors : tab === 'tasks' ? tasks : await api.get(tab);
+  const loaded = { projects, contributors, tasks, budget_lines: budgetLines };
+  const rows = loaded[tab] ?? await api.get(tab);
   const def = schema[tab];
-  const refOptions = buildRefOptions({ projects, contributors, tasks });
+  const refOptions = buildRefOptions(loaded);
 
   el.innerHTML = `
     <header class="page-header">
       <div><h1>Données</h1><p class="muted">Importez un fichier Excel, exportez vos données et modifiez directement les tables de la base.</p></div>
     </header>
 
-    <section class="stats stats-5">
+    <section class="stats stats-auto">
       ${TABLE_ORDER.map((k) => `<div class="stat stat-compact"><div class="stat-label">${esc(schema[k].label)}</div><div class="stat-value">${stats[k]}</div></div>`).join('')}
     </section>
 
     <div class="grid-2 grid-wide-left">
       <section class="card">
         <header class="card-header"><h2>Importer un fichier Excel</h2>
-          <a class="btn btn-small" href="/api/export?template=1" download>Télécharger le modèle</a></header>
+          <button class="btn btn-small" data-action="template">Télécharger le modèle</button></header>
         <ol class="steps muted small">
-          <li>Téléchargez le modèle (ou un export) et remplissez un onglet par table : Contributeurs, Projets, Tâches, Jalons, Dépenses.</li>
-          <li>Les liens se font par le nom (colonne « Projet », « Responsable »…). L'onglet « Mode d'emploi » détaille chaque colonne.</li>
+          <li>Téléchargez le modèle (ou un export) et remplissez un onglet par table : Contributeurs, Projets, Postes budgétaires, Tâches, Jalons, Engagements.</li>
+          <li>Les liens se font par le nom (colonnes « Projet », « Poste », « Responsable »…). L'onglet « Mode d'emploi » détaille chaque colonne.</li>
           <li>Analysez le fichier : rien n'est enregistré tant que vous n'avez pas confirmé.</li>
         </ol>
         <label class="dropzone" data-dropzone>
@@ -55,8 +57,9 @@ export async function dataView({ el, refresh }) {
       <div class="stack">
         <section class="card">
           <header class="card-header"><h2>Exporter / sauvegarder</h2></header>
-          <p class="muted small">Toute la base dans un classeur Excel (un onglet par table). Ce fichier peut être modifié puis ré-importé, ou servir de sauvegarde.</p>
-          <a class="btn btn-primary" href="/api/export" download>Télécharger les données (.xlsx)</a>
+          <p class="muted small">Toute la base dans un classeur Excel (un onglet par table). C'est aussi votre fichier de sauvegarde :
+            rouvrez-le avec « Ouvrir… » ou transmettez-le à un collègue.</p>
+          <button class="btn btn-primary" data-action="export">Enregistrer sous… (.xlsx)</button>
         </section>
         <section class="card danger-zone">
           <header class="card-header"><h2>Zone sensible</h2></header>
@@ -93,6 +96,15 @@ export async function dataView({ el, refresh }) {
       e.preventDefault();
       sessionStorage.setItem('data-tab', target.dataset.tab);
       return refresh();
+    }
+    if (action === 'template') {
+      downloadBytes(await api.exportWorkbook({ template: true }), 'modele-pilotage-projets.xlsx');
+      return;
+    }
+    if (action === 'export') {
+      const name = await saveToFile({ saveAs: true });
+      if (name) toast(`Données enregistrées dans « ${name} »`, 'success');
+      return;
     }
     if (action === 'analyze') return runImport(root, true, refresh);
     if (action === 'confirm-import') return runImport(root, false, refresh);
@@ -187,9 +199,7 @@ async function runImport(root, dryRun, refresh) {
   const buttons = root.querySelectorAll('[data-action="analyze"], [data-action="confirm-import"]');
   buttons.forEach((b) => { b.disabled = true; });
   try {
-    const res = await fetch(`/api/import?mode=${mode}${dryRun ? '&dryRun=1' : ''}`, { method: 'POST', body: file });
-    const report = await res.json();
-    if (!res.ok) throw new Error(report.error || `Erreur ${res.status}`);
+    const report = await api.importWorkbook(new Uint8Array(await file.arrayBuffer()), { mode, dryRun });
     if (!dryRun && report.saved) {
       importState.file = null;
       importState.report = null;
@@ -234,12 +244,13 @@ function reportHtml(r) {
 
 const normalize = (s) => String(s ?? '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
 
-function buildRefOptions({ projects, contributors, tasks }) {
+function buildRefOptions({ projects, contributors, tasks, budget_lines: lines }) {
   const projectName = new Map(projects.map((p) => [p.id, p.name]));
   return {
     projects: projects.map((p) => [p.id, p.name]),
     contributors: contributors.map((c) => [c.id, c.name]),
     tasks: tasks.map((t) => [t.id, `${projectName.get(t.project_id) ?? '?'} › ${t.title}`]),
+    budget_lines: lines.map((l) => [l.id, `${projectName.get(l.project_id) ?? '?'} › ${l.name}`]),
   };
 }
 

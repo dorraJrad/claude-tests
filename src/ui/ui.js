@@ -1,6 +1,6 @@
 // Utilitaires d'affichage partagés par les vues.
 
-import { LABELS } from './labels.js';
+import { LABELS } from '../core/labels.js';
 
 export { LABELS };
 
@@ -124,8 +124,10 @@ function fieldHtml(f, value) {
       input = `<input type="${f.type || 'text'}" ${common} value="${esc(value)}" ${extra}>`;
     }
   }
+  const fill = f.fill ? ` <button type="button" class="link-btn" data-fill="${f.name}" data-from="${f.fill.from}">${esc(f.fill.label)}</button>` : '';
   return `<label class="field${f.full ? ' full' : ''}" for="${id}">
-    <span>${esc(f.label)}${f.required ? ' *' : ''}</span>${input}
+    <span>${esc(f.label)}${f.required ? ' *' : ''}${fill}</span>${input}
+    ${f.hint ? `<small class="muted">${esc(f.hint)}</small>` : ''}
     <small class="field-error" data-error="${f.name}"></small></label>`;
 }
 
@@ -150,6 +152,10 @@ export function openForm({ title, fields, values = {}, submitLabel = 'Enregistre
   const form = dialog.querySelector('form');
   const close = () => dialog.close();
   dialog.querySelectorAll('[data-close]').forEach((b) => b.addEventListener('click', close));
+  dialog.querySelectorAll('[data-fill]').forEach((b) => b.addEventListener('click', (e) => {
+    e.preventDefault();
+    form.elements[b.dataset.fill].value = form.elements[b.dataset.from].value;
+  }));
 
   const showErrors = (err) => {
     form.querySelectorAll('[data-error]').forEach((n) => { n.textContent = ''; });

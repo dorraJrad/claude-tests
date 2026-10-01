@@ -1,4 +1,4 @@
-// Définition des ressources exposées par l'API et validation des entrées.
+// Schéma des données : tables, champs, règles de validation et liens entre tables.
 
 const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -6,7 +6,7 @@ export const ENUMS = {
   projectStatus: ['planned', 'active', 'on_hold', 'completed'],
   taskStatus: ['todo', 'in_progress', 'done'],
   priority: ['low', 'medium', 'high'],
-  expenseCategory: ['personnel', 'materiel', 'logiciel', 'prestation', 'deplacement', 'autre'],
+  category: ['personnel', 'prestation', 'logiciel', 'materiel', 'infrastructure', 'deplacement', 'formation', 'provision', 'autre'],
 };
 
 const dateOrder = (startKey, endKey, message) => (record) =>
@@ -14,6 +14,22 @@ const dateOrder = (startKey, endKey, message) => (record) =>
     ? { [endKey]: message }
     : null;
 
+const collator = new Intl.Collator('fr', { sensitivity: 'base', numeric: true });
+const byId = (a, b) => a.id - b.id;
+/** Tri par date croissante, les éléments sans date en dernier. */
+const byDate = (key) => (a, b) => (a[key] === b[key] ? 0 : !a[key] ? 1 : !b[key] ? -1 : a[key] < b[key] ? -1 : 1);
+const chain = (...cmps) => (a, b) => {
+  for (const cmp of cmps) {
+    const r = cmp(a, b);
+    if (r) return r;
+  }
+  return 0;
+};
+
+/*
+ * Pour chaque champ `ref`, `onDelete` indique ce qu'il advient de l'élément quand
+ * l'élément référencé est supprimé : 'cascade' (supprimé aussi) ou 'set null' (lien retiré).
+ */
 export const resources = {
   projects: {
     table: 'projects',
@@ -24,11 +40,11 @@ export const resources = {
       status: { type: 'enum', values: ENUMS.projectStatus, default: 'planned', label: 'Statut', labels: 'projectStatus' },
       start_date: { type: 'date', label: 'Début' },
       end_date: { type: 'date', label: 'Fin' },
-      budget: { type: 'number', min: 0, default: 0, label: 'Budget (€)' },
+      budget: { type: 'number', min: 0, default: 0, label: 'Budget global (€)' },
     },
     check: dateOrder('start_date', 'end_date', 'La date de fin doit suivre la date de début'),
     filters: ['status'],
-    orderBy: 'created_at DESC, id DESC',
+    sort: (a, b) => b.id - a.id,
   },
   contributors: {
     table: 'contributors',
@@ -40,55 +56,77 @@ export const resources = {
       daily_rate: { type: 'number', min: 0, default: 0, label: 'Taux journalier (€)' },
     },
     filters: [],
-    orderBy: 'name COLLATE NOCASE, id',
+    sort: chain((a, b) => collator.compare(a.name, b.name), byId),
+  },
+  budget_lines: {
+    table: 'budget_lines',
+    label: 'Postes budgétaires',
+    fields: {
+      project_id: { type: 'ref', required: true, label: 'Projet', ref: 'projects', onDelete: 'cascade' },
+      name: { type: 'text', required: true, max: 200, label: 'Poste' },
+      category: { type: 'enum', values: ENUMS.category, default: 'autre', label: 'Nature', labels: 'category' },
+      amount: { type: 'number', min: 0, default: 0, label: 'Budget prévu (€)' },
+      notes: { type: 'text', max: 2000, label: 'Commentaire', multiline: true },
+    },
+    filters: ['project_id', 'category'],
+    sort: byId,
   },
   tasks: {
     table: 'tasks',
     label: 'Tâches',
     fields: {
-      project_id: { type: 'ref', required: true, label: 'Projet', ref: 'projects' },
+      project_id: { type: 'ref', required: true, label: 'Projet', ref: 'projects', onDelete: 'cascade' },
       title: { type: 'text', required: true, max: 300, label: 'Titre' },
       description: { type: 'text', max: 5000, label: 'Description', multiline: true },
       status: { type: 'enum', values: ENUMS.taskStatus, default: 'todo', label: 'Statut', labels: 'taskStatus' },
       priority: { type: 'enum', values: ENUMS.priority, default: 'medium', label: 'Priorité', labels: 'priority' },
-      assignee_id: { type: 'ref', label: 'Responsable', ref: 'contributors' },
+      assignee_id: { type: 'ref', label: 'Responsable', ref: 'contributors', onDelete: 'set null' },
       start_date: { type: 'date', label: 'Début' },
       due_date: { type: 'date', label: 'Échéance' },
       estimated_hours: { type: 'number', min: 0, default: 0, label: 'Charge (h)' },
     },
     check: dateOrder('start_date', 'due_date', "L'échéance doit suivre la date de début"),
     filters: ['project_id', 'assignee_id', 'status'],
-    orderBy: 'due_date IS NULL, due_date, id',
+    sort: chain(byDate('due_date'), byId),
   },
   milestones: {
     table: 'milestones',
     label: 'Jalons',
     fields: {
-      project_id: { type: 'ref', required: true, label: 'Projet', ref: 'projects' },
+      project_id: { type: 'ref', required: true, label: 'Projet', ref: 'projects', onDelete: 'cascade' },
       name: { type: 'text', required: true, max: 300, label: 'Nom' },
       description: { type: 'text', max: 5000, label: 'Description', multiline: true },
       due_date: { type: 'date', required: true, label: 'Date' },
       done: { type: 'boolean', default: 0, label: 'Atteint' },
     },
     filters: ['project_id', 'done'],
-    orderBy: 'due_date, id',
+    sort: chain(byDate('due_date'), byId),
   },
   expenses: {
     table: 'expenses',
-    label: 'Dépenses',
+    label: 'Engagements & dépenses',
     fields: {
-      project_id: { type: 'ref', required: true, label: 'Projet', ref: 'projects' },
+      project_id: { type: 'ref', required: true, label: 'Projet', ref: 'projects', onDelete: 'cascade' },
+      budget_line_id: { type: 'ref', label: 'Poste', ref: 'budget_lines', onDelete: 'set null' },
       label: { type: 'text', required: true, max: 300, label: 'Libellé' },
-      category: { type: 'enum', values: ENUMS.expenseCategory, default: 'autre', label: 'Catégorie', labels: 'category' },
-      amount: { type: 'number', min: 0, required: true, label: 'Montant (€)' },
+      supplier: { type: 'text', max: 200, label: 'Fournisseur' },
+      reference: { type: 'text', max: 100, label: 'Référence (commande / facture)' },
       date: { type: 'date', required: true, label: 'Date' },
-      task_id: { type: 'ref', label: 'Tâche', ref: 'tasks' },
-      contributor_id: { type: 'ref', label: 'Contributeur', ref: 'contributors' },
+      amount_committed: { type: 'number', min: 0, required: true, label: 'Montant engagé (€)' },
+      amount_invoiced: { type: 'number', min: 0, default: 0, label: 'Montant réalisé (€)' },
+      task_id: { type: 'ref', label: 'Tâche', ref: 'tasks', onDelete: 'set null' },
+      contributor_id: { type: 'ref', label: 'Contributeur', ref: 'contributors', onDelete: 'set null' },
     },
-    filters: ['project_id', 'task_id', 'contributor_id'],
-    orderBy: 'date DESC, id DESC',
+    check: (r) => (r.amount_invoiced > r.amount_committed
+      ? { amount_invoiced: "Le réalisé ne peut pas dépasser l'engagé : augmentez d'abord le montant engagé" }
+      : null),
+    filters: ['project_id', 'budget_line_id', 'task_id', 'contributor_id'],
+    sort: chain((a, b) => (a.date === b.date ? 0 : a.date < b.date ? 1 : -1), (a, b) => b.id - a.id),
   },
 };
+
+/** Ordre de chargement : une table n'y référence que des tables placées avant elle. */
+export const TABLE_ORDER = ['contributors', 'projects', 'budget_lines', 'tasks', 'milestones', 'expenses'];
 
 export function isIsoDate(value) {
   if (typeof value !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
@@ -141,7 +179,7 @@ export function coerce(field, value) {
  */
 export function validate(def, input, { partial = false } = {}) {
   if (!input || typeof input !== 'object' || Array.isArray(input)) {
-    return { errors: { _: 'Un objet JSON est attendu' } };
+    return { errors: { _: 'Données attendues' } };
   }
   const data = {};
   const errors = {};

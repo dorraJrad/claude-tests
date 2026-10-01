@@ -1,102 +1,8 @@
-// Lecture et écriture minimales de classeurs Excel (.xlsx) sans dépendance externe.
+// Lecture et écriture minimales de classeurs Excel (.xlsx) sans dépendance externe (navigateur et Node).
 // Un .xlsx est une archive ZIP contenant des fichiers XML (format Office Open XML).
-import { inflateRawSync, deflateRawSync, crc32 } from 'node:zlib';
-
-const MAX_UNCOMPRESSED = 100 * 1024 * 1024;
+import { readZip, writeZip, ZipError } from './zip.js';
 
 export class XlsxError extends Error {}
-
-// --- ZIP ----------------------------------------------------------------------
-
-function readZip(buf) {
-  let eocd = -1;
-  for (let i = buf.length - 22; i >= Math.max(0, buf.length - 65557); i--) {
-    if (buf.readUInt32LE(i) === 0x06054b50) { eocd = i; break; }
-  }
-  if (eocd < 0) throw new XlsxError("Le fichier n'est pas un classeur Excel (.xlsx) valide");
-
-  const count = buf.readUInt16LE(eocd + 10);
-  let ptr = buf.readUInt32LE(eocd + 16);
-  const entries = new Map();
-  let total = 0;
-  for (let n = 0; n < count; n++) {
-    if (ptr + 46 > buf.length || buf.readUInt32LE(ptr) !== 0x02014b50) throw new XlsxError('Archive corrompue');
-    const method = buf.readUInt16LE(ptr + 10);
-    const compressed = buf.readUInt32LE(ptr + 20);
-    const size = buf.readUInt32LE(ptr + 24);
-    const nameLen = buf.readUInt16LE(ptr + 28);
-    const extraLen = buf.readUInt16LE(ptr + 30);
-    const commentLen = buf.readUInt16LE(ptr + 32);
-    const offset = buf.readUInt32LE(ptr + 42);
-    const name = buf.toString('utf8', ptr + 46, ptr + 46 + nameLen);
-    entries.set(name, { method, compressed, size, offset });
-    total += size;
-    ptr += 46 + nameLen + extraLen + commentLen;
-  }
-  if (total > MAX_UNCOMPRESSED) throw new XlsxError('Classeur trop volumineux');
-
-  return (name) => {
-    const e = entries.get(name);
-    if (!e) return null;
-    if (buf.readUInt32LE(e.offset) !== 0x04034b50) throw new XlsxError('Archive corrompue');
-    const start = e.offset + 30 + buf.readUInt16LE(e.offset + 26) + buf.readUInt16LE(e.offset + 28);
-    const data = buf.subarray(start, start + e.compressed);
-    if (e.method === 0) return data.toString('utf8');
-    if (e.method === 8) return inflateRawSync(data, { maxOutputLength: MAX_UNCOMPRESSED }).toString('utf8');
-    throw new XlsxError('Méthode de compression non prise en charge');
-  };
-}
-
-function writeZip(files) {
-  const locals = [];
-  const centrals = [];
-  let offset = 0;
-  for (const [name, content] of files) {
-    const raw = Buffer.from(content, 'utf8');
-    const data = deflateRawSync(raw);
-    const nameBuf = Buffer.from(name, 'utf8');
-    const crc = crc32(raw);
-
-    const local = Buffer.alloc(30);
-    local.writeUInt32LE(0x04034b50, 0);
-    local.writeUInt16LE(20, 4);           // version
-    local.writeUInt16LE(0x0800, 6);       // noms en UTF-8
-    local.writeUInt16LE(8, 8);            // deflate
-    local.writeUInt16LE(0, 10);           // heure
-    local.writeUInt16LE(0x21, 12);        // date (1980-01-01)
-    local.writeUInt32LE(crc, 14);
-    local.writeUInt32LE(data.length, 18);
-    local.writeUInt32LE(raw.length, 22);
-    local.writeUInt16LE(nameBuf.length, 26);
-    local.writeUInt16LE(0, 28);
-
-    const central = Buffer.alloc(46);
-    central.writeUInt32LE(0x02014b50, 0);
-    central.writeUInt16LE(20, 4);
-    central.writeUInt16LE(20, 6);
-    central.writeUInt16LE(0x0800, 8);
-    central.writeUInt16LE(8, 10);
-    central.writeUInt16LE(0, 12);
-    central.writeUInt16LE(0x21, 14);
-    central.writeUInt32LE(crc, 16);
-    central.writeUInt32LE(data.length, 20);
-    central.writeUInt32LE(raw.length, 24);
-    central.writeUInt16LE(nameBuf.length, 28);
-    central.writeUInt32LE(offset, 42);
-
-    locals.push(local, nameBuf, data);
-    centrals.push(central, nameBuf);
-    offset += local.length + nameBuf.length + data.length;
-  }
-  const centralDir = Buffer.concat(centrals);
-  const end = Buffer.alloc(22);
-  end.writeUInt32LE(0x06054b50, 0);
-  end.writeUInt16LE(files.length, 8);
-  end.writeUInt16LE(files.length, 10);
-  end.writeUInt32LE(centralDir.length, 12);
-  end.writeUInt32LE(offset, 16);
-  return Buffer.concat([...locals, centralDir, end]);
-}
 
 // --- XML ------------------------------------------------------------------------
 
@@ -157,8 +63,15 @@ function colName(index) {
  * tableau de lignes (tableaux de cellules : chaîne, nombre, booléen ou null).
  */
 export function readXlsx(buffer) {
-  const read = readZip(buffer);
-  const workbook = read('xl/workbook.xml');
+  let read;
+  let workbook;
+  try {
+    read = readZip(buffer);
+    workbook = read('xl/workbook.xml');
+  } catch (err) {
+    if (err instanceof ZipError) throw new XlsxError("Le fichier n'est pas un classeur Excel (.xlsx) valide");
+    throw err;
+  }
   if (!workbook) throw new XlsxError("Le fichier n'est pas un classeur Excel (.xlsx) valide");
 
   const rels = new Map();

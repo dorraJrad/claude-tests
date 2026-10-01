@@ -1,15 +1,14 @@
 {
   "name": "pilotage-projets",
   "version": "1.0.0",
-  "description": "Application web de suivi de projets : tâches, budgets, échéances et contributeurs",
+  "description": "Application de pilotage de projets autonome (un seul fichier HTML) : tâches, budgets, échéances et contributeurs",
   "type": "module",
   "private": true,
-  "engines": {
-    "node": ">=22.13"
-  },
   "scripts": {
-    "start": "node --disable-warning=ExperimentalWarning src/index.js",
-    "seed": "node --disable-warning=ExperimentalWarning src/seed.js",
-    "test": "node --disable-warning=ExperimentalWarning --test \"test/**/*.test.js\""
+    "build": "node build.mjs",
+    "test": "node --test \"test/**/*.test.js\""
+  },
+  "devDependencies": {
+    "esbuild": "^0.28.2"
   }
 }

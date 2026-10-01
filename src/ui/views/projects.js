@@ -37,7 +37,7 @@ export async function projectsList({ el, refresh }) {
 }
 
 function card(p) {
-  const budgetPct = p.budget ? (p.spent / p.budget) * 100 : (p.spent ? 100 : 0);
+  const budgetPct = p.budget ? (p.committed / p.budget) * 100 : (p.committed ? 100 : 0);
   return `<a class="card project-card" href="#/projets/${p.id}">
     <div class="project-card-head">
       <h3>${esc(p.name)}</h3>
@@ -47,8 +47,8 @@ function card(p) {
     ${p.description ? `<p class="clamp">${esc(p.description)}</p>` : ''}
     <div class="metric"><span>Avancement</span><span>${p.progress} %</span></div>
     ${progressBar(p.progress, 'info', 'Avancement')}
-    <div class="metric"><span>Budget</span><span>${money(p.spent)} / ${money(p.budget)}</span></div>
-    ${progressBar(budgetPct, budgetTone(p.spent, p.budget), 'Budget consommé')}
+    <div class="metric"><span>Budget engagé</span><span>${money(p.committed)} / ${money(p.budget)}</span></div>
+    ${progressBar(budgetPct, budgetTone(p.committed, p.budget), 'Budget engagé')}
     <div class="project-card-foot small">
       <span>${p.task_total} tâche(s)${p.task_overdue ? ` · <span class="text-danger">${p.task_overdue} en retard</span>` : ''}</span>
       <span>${p.next_deadline ? `Prochaine échéance ${esc(relDay(p.next_deadline))}` : 'Aucune échéance'}</span>
