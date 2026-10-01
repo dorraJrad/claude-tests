@@ -79,7 +79,11 @@ ou d'engagé > 90 % du budget.
 
 ### Format du fichier Excel
 
-Exemple complet : [`exemples/exemple-donnees-pilotage-projets.xlsx`](exemples/exemple-donnees-pilotage-projets.xlsx) (données de démonstration).
+Deux modèles sont fournis dans le dossier `exemples/` :
+- [`modele-vierge-pilotage-projets.xlsx`](exemples/modele-vierge-pilotage-projets.xlsx) : tous les onglets et en-têtes, sans données, à remplir dans Excel ;
+- [`exemple-donnees-pilotage-projets.xlsx`](exemples/exemple-donnees-pilotage-projets.xlsx) : le même fichier rempli avec les 3 projets de démonstration.
+
+Ouvrez-les dans l'application avec **Ouvrir…** (ou importez-les depuis la rubrique **Données**).
 
 Un onglet par table : *Contributeurs, Projets, Postes budgétaires, Tâches, Jalons, Engagements*, plus un onglet
 *Mode d'emploi* qui décrit chaque colonne. Les liens se font par le nom (colonne « Projet » = nom du projet,
