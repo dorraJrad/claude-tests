@@ -79,6 +79,8 @@ ou d'engagé > 90 % du budget.
 
 ### Format du fichier Excel
 
+Exemple complet : [`exemples/exemple-donnees-pilotage-projets.xlsx`](exemples/exemple-donnees-pilotage-projets.xlsx) (données de démonstration).
+
 Un onglet par table : *Contributeurs, Projets, Postes budgétaires, Tâches, Jalons, Engagements*, plus un onglet
 *Mode d'emploi* qui décrit chaque colonne. Les liens se font par le nom (colonne « Projet » = nom du projet,
 « Poste » = nom d'un poste de ce projet, « Responsable » = nom d'un contributeur). Les libellés français
